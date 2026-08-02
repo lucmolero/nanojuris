@@ -37,8 +37,9 @@ auditoria de jurisprudencia publica brasileira.
 
 O projeto nasce com o provider `bnp_pangea`, que consulta a API publica usada
 pelo frontend do Banco Nacional de Precedentes/Pangea. A arquitetura foi
-desenhada para receber novos conectores como TJSP/CJSG, STJ, STF, TSE, TRF4 e
-TST.
+desenhada para receber fontes JSON e HTML legadas. O provider `tjsp_cjsg`
+consulta a pesquisa publica de jurisprudencia do TJSP/CJSG quando a fonte nao
+exige controle de acesso.
 
 ## Por que existe
 
@@ -134,6 +135,28 @@ Teste live opcional:
 $env:NANOJURIS_RUN_LIVE = "1"
 python -m pytest -m live
 ```
+
+### `tjsp_cjsg`
+
+Fonte: Consulta de Jurisprudencia do TJSP/CJSG.
+
+Recursos:
+
+- busca completa via formulario publico;
+- parser HTML de resultados;
+- extracao de numero do processo/recurso, relator, comarca, orgao julgador,
+  classe, assunto e ementa;
+- identificadores `cdAcordao` e `cdForo`;
+- URL publica de inteiro teor quando disponivel;
+- deteccao de captcha/controle de acesso sem bypass.
+
+Exemplo:
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjsp_cjsg --tipos acordao --limite 5
+```
+
+Se o TJSP exigir captcha, o provider interrompe a operacao com erro claro.
 
 ## Filosofia tecnica
 

@@ -126,9 +126,70 @@ python -m pytest -m live
 
 ## Planejados
 
-- `tjsp_cjsg`
 - `stj`
 - `stf`
 - `tse`
 - `trf4`
 - `tst`
+
+## `tjsp_cjsg`
+
+Provider para a Consulta de Jurisprudencia do TJSP/CJSG.
+
+### Escopo
+
+```text
+POST /cjsg/resultadoCompleta.do
+GET  /cjsg/getArquivo.do?cdAcordao=<id>&cdForo=<foro>
+```
+
+O provider busca a consulta completa publica e normaliza o HTML de resultados
+para `JurisprudenceResult`.
+
+Campos extraidos:
+
+```text
+numero do processo/recurso
+cdAcordao
+cdForo
+ementa
+classe
+assunto
+relator
+comarca
+orgao julgador
+data de registro
+URL de inteiro teor
+```
+
+### Uso
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjsp_cjsg --tipos acordao --limite 5
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+page = client.search("infanticidio", source="tjsp_cjsg", types=["acordao"])
+```
+
+### Controle de acesso
+
+O TJSP/CJSG pode exigir captcha ou outro controle. O NanoJuris nao implementa
+bypass. Quando isso acontece, o provider levanta `AccessControlRequiredError`.
+
+### Teste live opcional
+
+```bash
+$env:NANOJURIS_RUN_TJSP_LIVE = "1"
+python -m pytest tests/test_tjsp_cjsg_live.py
+```
+
+O teste live aceita dois comportamentos corretos:
+
+- resultados publicos parseados;
+- controle de acesso detectado explicitamente.

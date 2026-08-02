@@ -10,6 +10,7 @@ from nanojuris.errors import UnsupportedProviderError
 from nanojuris.models import DecisionBundle, JurisprudenceQuery, ProviderCatalog, SearchPage
 from nanojuris.providers.base import JurisprudenceProvider
 from nanojuris.providers.bnp_pangea import BnpPangeaProvider
+from nanojuris.providers.tjsp_cjsg import TjspCjsgProvider
 
 
 class NanoJurisClient:
@@ -22,7 +23,9 @@ class NanoJurisClient:
     ) -> None:
         self.config = config or NanoJurisConfig()
         provider_list = (
-            list(providers) if providers is not None else [BnpPangeaProvider(self.config)]
+            list(providers)
+            if providers is not None
+            else [BnpPangeaProvider(self.config), TjspCjsgProvider(self.config)]
         )
         self.providers = {provider.name: provider for provider in provider_list}
 

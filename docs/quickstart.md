@@ -47,3 +47,12 @@ nanojuris parametros --catalogo
 ```bash
 nanojuris sugestoes "icms"
 ```
+
+## Busque no TJSP/CJSG
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjsp_cjsg --tipos acordao --limite 5
+```
+
+Se a fonte exigir captcha, o NanoJuris retorna erro claro e nao tenta contornar
+o controle de acesso.

@@ -15,3 +15,4 @@ Todas as mudancas relevantes deste projeto serao documentadas aqui.
 - Sugestoes publicas de busca expostas no provider, cliente e CLI.
 - Fixtures cobrindo RG, RR, IAC, IRDR, SUM e SV.
 - Testes live opcionais controlados por `NANOJURIS_RUN_LIVE=1`.
+- Provider TJSP/CJSG com parser HTML, fixture sanitizada e deteccao de captcha.

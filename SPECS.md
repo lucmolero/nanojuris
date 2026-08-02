@@ -60,3 +60,16 @@ O provider BNP/Pangea deve cobrir:
 - decisoes vinculadas quando disponiveis;
 - testes sem rede;
 - testes live opcionais controlados por `NANOJURIS_RUN_LIVE=1`.
+
+## TJSP/CJSG v0.2.x
+
+O provider TJSP/CJSG deve cobrir:
+
+- formulario publico de consulta completa;
+- parser HTML de resultados;
+- extracao de `cdAcordao` e `cdForo`;
+- URL de inteiro teor publico;
+- campos de classe, assunto, relator, comarca, orgao julgador e data;
+- fixture HTML sanitizada;
+- erro explicito para captcha/controle de acesso;
+- nenhum bypass de captcha, login ou acesso restrito.
