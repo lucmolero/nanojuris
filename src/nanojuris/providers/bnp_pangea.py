@@ -1,0 +1,215 @@
+"""BNP/Pangea public provider."""
+
+from __future__ import annotations
+
+import time
+from typing import Any
+
+import requests
+
+from nanojuris.config import NanoJurisConfig
+from nanojuris.errors import (
+    ParserContractChangedError,
+    RateLimitDetectedError,
+    SourceUnavailableError,
+)
+from nanojuris.models import (
+    DecisionBundle,
+    JurisprudenceQuery,
+    JurisprudenceResult,
+    ParadigmCase,
+    SearchPage,
+    SourceTrace,
+)
+from nanojuris.providers.base import JurisprudenceProvider
+
+
+class BnpPangeaProvider(JurisprudenceProvider):
+    """Provider for the public Pangea/BNP frontend API."""
+
+    name = "bnp_pangea"
+
+    def __init__(
+        self,
+        config: NanoJurisConfig | None = None,
+        session: requests.Session | None = None,
+    ) -> None:
+        self.config = config or NanoJurisConfig()
+        self.session = session or requests.Session()
+        self._last_request = 0.0
+
+    def get_parameters(self) -> dict[str, Any]:
+        data = self._request_json("GET", "/parametros")
+        if not isinstance(data, dict):
+            raise ParserContractChangedError("BNP parametros response is not an object")
+        return data
+
+    def list_suggestions(self, text: str) -> list[str]:
+        data = self._request_json("GET", "/sugestoes", params={"texto": text})
+        if isinstance(data, list):
+            return [str(item) for item in data]
+        raise ParserContractChangedError("BNP suggestions response is not a list")
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        endpoint = "/precedentes"
+        payload = {"filtro": self._build_filter(query)}
+        data = self._request_json("POST", endpoint, json=payload)
+        self._validate_search_response(data)
+
+        trace = SourceTrace(
+            provider=self.name,
+            endpoint=endpoint,
+            query=payload,
+            source_url=self.config.bnp_api_url.rstrip("/") + endpoint,
+            limitations=[
+                "Fonte publica consumida a partir da API usada pelo frontend Pangea/BNP.",
+                "Resultados dependem da disponibilidade e do contrato atual da fonte.",
+            ],
+        )
+
+        results = [self._map_result(item, trace) for item in data.get("resultados", [])]
+        return SearchPage(
+            source=self.name,
+            total=int(data.get("total") or 0),
+            start=int(data.get("posicao_inicial") or 0),
+            end=int(data.get("posicao_final") or 0),
+            page=query.page,
+            page_size=query.page_size,
+            results=results,
+            aggregations={
+                "species": list(data.get("aggsEspecies") or []),
+                "courts": list(data.get("aggsOrgaos") or []),
+            },
+            source_trace=trace,
+        )
+
+    def get_decisions(self, precedent_id: str) -> DecisionBundle:
+        endpoint = f"/precedentes/{precedent_id}/decisoes"
+        data = self._request_json("GET", endpoint)
+        if not isinstance(data, dict):
+            raise ParserContractChangedError("BNP decisions response is not an object")
+
+        trace = SourceTrace(
+            provider=self.name,
+            endpoint=endpoint,
+            query={"precedent_id": precedent_id},
+            source_url=self.config.bnp_api_url.rstrip("/") + endpoint,
+            limitations=[
+                "Nem todo precedente possui textos de decisoes no endpoint publico.",
+            ],
+        )
+        return DecisionBundle(
+            precedent_id=precedent_id,
+            source=self.name,
+            rapporteur=data.get("relator"),
+            procedural_follow_url=data.get("linkAcompanhamentoProcesssual")
+            or data.get("linkAcompanhamentoProcessual"),
+            texts=list(data.get("textos") or []),
+            source_trace=trace,
+            raw=data,
+        )
+
+    def _build_filter(self, query: JurisprudenceQuery) -> dict[str, Any]:
+        return {
+            "buscaGeral": query.text,
+            "todasPalavras": query.all_words,
+            "quaisquerPalavras": query.any_words,
+            "semPalavras": query.without_words,
+            "trechoExato": query.exact_phrase,
+            "atualizacaoDesde": query.updated_from,
+            "atualizacaoAte": query.updated_to,
+            "cancelados": query.include_cancelled,
+            "ordenacao": query.order_by,
+            "nr": query.number,
+            "pagina": query.page,
+            "tamanhoPagina": query.page_size,
+            "orgaos": query.courts,
+            "tipos": query.types,
+        }
+
+    def _map_result(
+        self,
+        item: dict[str, Any],
+        trace: SourceTrace,
+    ) -> JurisprudenceResult:
+        precedent_id = str(item.get("id") or "")
+        if not precedent_id:
+            raise ParserContractChangedError("BNP result without id")
+
+        cases = [
+            ParadigmCase(
+                number=str(case.get("numero") or ""),
+                case_class=case.get("classe"),
+                url=case.get("link"),
+            )
+            for case in item.get("processosParadigma") or []
+            if isinstance(case, dict)
+        ]
+
+        highlight = item.get("highlight")
+        highlights = highlight if isinstance(highlight, dict) else {}
+
+        return JurisprudenceResult(
+            id=precedent_id,
+            source=self.name,
+            court=str(item.get("orgao") or ""),
+            type=str(item.get("tipo") or ""),
+            number=item.get("nr"),
+            question=item.get("questao"),
+            thesis=item.get("tese"),
+            status=item.get("situacao"),
+            updated_at=item.get("ultimaAtualizacao"),
+            paradigm_cases=cases,
+            highlights={str(k): str(v) for k, v in highlights.items()},
+            source_trace=trace,
+            raw=item,
+        )
+
+    def _request_json(self, method: str, path: str, **kwargs: Any) -> Any:
+        self._respect_rate_limit()
+        url = self.config.bnp_api_url.rstrip("/") + path
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": self.config.user_agent,
+        }
+        try:
+            response = self.session.request(
+                method,
+                url,
+                headers=headers,
+                timeout=self.config.timeout,
+                **kwargs,
+            )
+        except requests.RequestException as exc:
+            raise SourceUnavailableError(f"BNP request failed: {exc}") from exc
+
+        if response.status_code == 429:
+            raise RateLimitDetectedError("BNP returned HTTP 429")
+        if response.status_code >= 500:
+            raise SourceUnavailableError(f"BNP returned HTTP {response.status_code}")
+        if response.status_code >= 400:
+            raise SourceUnavailableError(f"BNP rejected request with HTTP {response.status_code}")
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise ParserContractChangedError("BNP response is not valid JSON") from exc
+
+    def _respect_rate_limit(self) -> None:
+        interval = self.config.rate_limit_interval
+        if interval <= 0:
+            return
+        elapsed = time.monotonic() - self._last_request
+        if elapsed < interval:
+            time.sleep(interval - elapsed)
+        self._last_request = time.monotonic()
+
+    @staticmethod
+    def _validate_search_response(data: Any) -> None:
+        if not isinstance(data, dict):
+            raise ParserContractChangedError("BNP search response is not an object")
+        for key in ("resultados", "total"):
+            if key not in data:
+                raise ParserContractChangedError(f"BNP search response missing {key!r}")
+        if not isinstance(data.get("resultados"), list):
+            raise ParserContractChangedError("BNP search resultados is not a list")
