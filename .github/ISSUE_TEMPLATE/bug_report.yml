@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible bug in NanoJuris
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o NanoJuris. Nao inclua tokens, cookies, HARs completos ou dados sensiveis.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o comportamento observado.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que voce esperava?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Como reproduzir
+      description: Comandos, query e provider usados.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versao do NanoJuris
+      placeholder: "0.1.0"
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - bnp_pangea
+        - tjsp_cjsg
+        - stj
+        - stf
+        - outro

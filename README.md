@@ -9,7 +9,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lucmolero/nanojuris/actions">CI</a>
+  <a href="https://github.com/lucmolero/nanojuris/actions/workflows/ci.yml">
+    <img src="https://github.com/lucmolero/nanojuris/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://github.com/lucmolero/nanojuris/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT" />
+  </a>
+  <a href="https://github.com/lucmolero/nanojuris">
+    <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/lucmolero/nanojuris/actions">Actions</a>
   ·
   <a href="docs/quickstart.md">Quickstart</a>
   ·

@@ -1,0 +1,47 @@
+name: Provider request
+description: Suggest a new jurisprudence or precedent source
+title: "provider: "
+labels: ["provider", "research"]
+body:
+  - type: input
+    id: source-name
+    attributes:
+      label: Fonte
+      placeholder: "STJ, STF, TJSP/CJSG, TSE..."
+    validations:
+      required: true
+  - type: input
+    id: public-url
+    attributes:
+      label: URL publica
+      placeholder: "https://..."
+    validations:
+      required: true
+  - type: dropdown
+    id: source-kind
+    attributes:
+      label: Tipo de fonte
+      options:
+        - API publica JSON
+        - HTML publico
+        - PDF publico
+        - SPA/frontend publico
+        - Ainda nao sei
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Valor juridico
+      description: Que tipo de jurisprudencia, precedente, tese ou decisao essa fonte oferece?
+    validations:
+      required: true
+  - type: checkboxes
+    id: limits
+    attributes:
+      label: Limites
+      options:
+        - label: A fonte parece publica.
+          required: true
+        - label: Nao estou solicitando bypass de captcha, login ou segredo de justica.
+          required: true
