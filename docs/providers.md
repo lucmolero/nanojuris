@@ -132,6 +132,10 @@ python -m pytest -m live
 - `trf4`
 - `tst`
 
+### Pesquisa tecnica STJ
+
+A primeira pesquisa tecnica para o futuro provider STJ esta em [stj-provider-research.md](stj-provider-research.md). Ela separa os fluxos de SCON, precedentes qualificados e publicacoes, define criterios de fixture e marca o escopo inicial do provider como SCON para acordaos e inteiro teor.
+
 ## `tjsp_cjsg`
 
 Provider para a Consulta de Jurisprudencia do TJSP/CJSG.

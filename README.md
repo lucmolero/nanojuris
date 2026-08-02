@@ -39,7 +39,8 @@ O projeto nasce com o provider `bnp_pangea`, que consulta a API publica usada
 pelo frontend do Banco Nacional de Precedentes/Pangea. A arquitetura foi
 desenhada para receber fontes JSON e HTML legadas. O provider `tjsp_cjsg`
 consulta a pesquisa publica de jurisprudencia do TJSP/CJSG quando a fonte nao
-exige controle de acesso.
+exige controle de acesso. Para o proximo passo de expansão, a pesquisa inicial
+para o provider STJ ja esta documentada em [docs/stj-provider-research.md](docs/stj-provider-research.md).
 
 ## Por que existe
 

@@ -21,6 +21,7 @@
 - STJ.
 - Pesquisa de jurisprudencia.
 - Repetitivos e sumulas.
+- Pesquisa tecnica inicial registrada em [stj-provider-research.md](stj-provider-research.md).
 
 ## 0.4
 
