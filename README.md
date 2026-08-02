@@ -109,10 +109,31 @@ Fonte: Banco Nacional de Precedentes/Pangea.
 Recursos:
 
 - parametros publicos de orgaos e especies;
+- catalogo normalizado de tribunais e especies;
+- sugestoes publicas de pesquisa;
 - busca textual de precedentes;
 - agregacoes por tribunal e especie;
 - detalhes de decisoes vinculadas quando disponiveis;
 - rastreabilidade de endpoint, filtro e data de coleta.
+
+Catalogo normalizado:
+
+```bash
+nanojuris parametros --catalogo
+```
+
+Sugestoes, quando o endpoint publico estiver disponivel:
+
+```bash
+nanojuris sugestoes "icms"
+```
+
+Teste live opcional:
+
+```bash
+$env:NANOJURIS_RUN_LIVE = "1"
+python -m pytest -m live
+```
 
 ## Filosofia tecnica
 

@@ -41,6 +41,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     parametros = sub.add_parser("parametros", help="Listar parametros publicos do provider")
     parametros.add_argument("--fonte", default="bnp_pangea")
+    parametros.add_argument(
+        "--catalogo",
+        action="store_true",
+        help="Normalizar parametros em tribunais, especies e grupos",
+    )
+
+    sugestoes = sub.add_parser("sugestoes", help="Listar sugestoes publicas de busca")
+    sugestoes.add_argument("texto", help="Texto inicial")
+    sugestoes.add_argument("--fonte", default="bnp_pangea")
 
     return parser
 
@@ -69,8 +78,17 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "parametros":
-            params = client.get_parameters(source=args.fonte)
+            params = (
+                client.get_catalog(source=args.fonte).to_dict()
+                if args.catalogo
+                else client.get_parameters(source=args.fonte)
+            )
             print(json.dumps(params, ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "sugestoes":
+            suggestions = client.list_suggestions(args.texto, source=args.fonte)
+            print(json.dumps(suggestions, ensure_ascii=False, indent=2))
             return 0
     except Exception as exc:  # noqa: BLE001 - CLI boundary
         print(f"erro: {exc}", file=sys.stderr)

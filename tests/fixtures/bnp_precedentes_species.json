@@ -1,0 +1,87 @@
+{
+  "total": 6,
+  "posicao_inicial": 1,
+  "posicao_final": 6,
+  "aggsEspecies": [
+    {"tipo": "RG", "total": 1},
+    {"tipo": "RR", "total": 1},
+    {"tipo": "IAC", "total": 1},
+    {"tipo": "IRDR", "total": 1},
+    {"tipo": "SUM", "total": 1},
+    {"tipo": "SV", "total": 1}
+  ],
+  "aggsOrgaos": [
+    {"tipo": "STF", "total": 2},
+    {"tipo": "STJ", "total": 2},
+    {"tipo": "TJSP", "total": 1},
+    {"tipo": "TST", "total": 1}
+  ],
+  "resultados": [
+    {
+      "id": "stf-rg-615",
+      "orgao": "STF",
+      "tipo": "RG",
+      "nr": 615,
+      "questao": "Questao de repercussao geral",
+      "tese": "Tese de repercussao geral",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "20/06/2024",
+      "processosParadigma": [{"numero": "680089", "classe": 1348, "link": "https://example.test/stf"}]
+    },
+    {
+      "id": "stj-rr-1",
+      "orgao": "STJ",
+      "tipo": "RR",
+      "nr": 1,
+      "questao": "Questao de recurso repetitivo",
+      "tese": "Tese de recurso repetitivo",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "01/01/2026",
+      "processosParadigma": [{"numero": "123456", "classe": "REsp", "link": "https://example.test/stj"}]
+    },
+    {
+      "id": "stj-iac-1",
+      "orgao": "STJ",
+      "tipo": "IAC",
+      "nr": 1,
+      "questao": "Questao de IAC",
+      "tese": "Tese de IAC",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "01/01/2026",
+      "processosParadigma": []
+    },
+    {
+      "id": "tjsp-irdr-1",
+      "orgao": "TJSP",
+      "tipo": "IRDR",
+      "nr": 1,
+      "questao": "Questao de IRDR",
+      "tese": "Tese de IRDR",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "01/01/2026",
+      "processosParadigma": []
+    },
+    {
+      "id": "tst-sum-1",
+      "orgao": "TST",
+      "tipo": "SUM",
+      "nr": 1,
+      "questao": "Sumula",
+      "tese": "Texto de sumula",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "01/01/2026",
+      "processosParadigma": []
+    },
+    {
+      "id": "stf-sv-1",
+      "orgao": "STF",
+      "tipo": "SV",
+      "nr": 1,
+      "questao": "Sumula vinculante",
+      "tese": "Texto de sumula vinculante",
+      "situacao": "Vigente",
+      "ultimaAtualizacao": "01/01/2026",
+      "processosParadigma": []
+    }
+  ]
+}

@@ -10,6 +10,8 @@ from nanojuris.models import (
     JurisprudenceQuery,
     JurisprudenceResult,
     ParadigmCase,
+    ProviderCatalog,
+    ProviderOption,
     SearchPage,
     SourceTrace,
 )
@@ -50,6 +52,16 @@ class FakeProvider:
     def get_parameters(self):
         return {"ok": True}
 
+    def get_catalog(self):
+        return ProviderCatalog(
+            source="fake",
+            courts=[ProviderOption(code="STF", description="Supremo Tribunal Federal")],
+            species=[ProviderOption(code="RG", description="Tema de Repercussao Geral")],
+        )
+
+    def list_suggestions(self, text):
+        return [text, f"{text} sugestao"]
+
 
 def test_client_builds_query_for_provider():
     provider = FakeProvider()
@@ -72,6 +84,8 @@ def test_client_delegates_decisions_and_parameters():
 
     assert client.get_decisions("fake-1", source="fake").precedent_id == "fake-1"
     assert client.get_parameters(source="fake") == {"ok": True}
+    assert client.get_catalog(source="fake").courts[0].code == "STF"
+    assert client.list_suggestions("icms", source="fake") == ["icms", "icms sugestao"]
 
 
 def test_client_rejects_unknown_provider():
@@ -140,12 +154,16 @@ def test_model_to_dict_methods():
     result = JurisprudenceResult(id="r1", source="fake", court="STF", type="RG")
     page = SearchPage(source="fake", total=0, start=0, end=0, page=1, page_size=10, results=[])
     bundle = DecisionBundle(precedent_id="r1", source="fake")
+    option = ProviderOption(code="STF", description="Supremo Tribunal Federal")
+    catalog = ProviderCatalog(source="fake", courts=[option])
 
     assert trace.to_dict()["provider"] == "fake"
     assert case.to_dict()["number"] == "123"
     assert result.to_dict()["id"] == "r1"
     assert page.to_dict()["source"] == "fake"
     assert bundle.to_dict()["precedent_id"] == "r1"
+    assert option.to_dict()["code"] == "STF"
+    assert catalog.to_dict()["courts"][0]["code"] == "STF"
 
 
 def test_base_provider_default_parameters():

@@ -18,6 +18,8 @@ from nanojuris.models import (
     JurisprudenceQuery,
     JurisprudenceResult,
     ParadigmCase,
+    ProviderCatalog,
+    ProviderOption,
     SearchPage,
     SourceTrace,
 )
@@ -44,8 +46,46 @@ class BnpPangeaProvider(JurisprudenceProvider):
             raise ParserContractChangedError("BNP parametros response is not an object")
         return data
 
+    def get_catalog(self) -> ProviderCatalog:
+        endpoint = "/parametros"
+        data = self.get_parameters()
+        self._validate_parameters_response(data)
+        trace = SourceTrace(
+            provider=self.name,
+            endpoint=endpoint,
+            source_url=self.config.bnp_api_url.rstrip("/") + endpoint,
+            limitations=[
+                "Catalogo publico exposto pela interface Pangea/BNP.",
+                "Orgaos marcados como sem precedentes podem aparecer desabilitados.",
+            ],
+        )
+        return ProviderCatalog(
+            source=self.name,
+            courts=self._map_options(data.get("orgaos") or [], disabled_key="semPrecedentes"),
+            species=self._map_options(data.get("especies") or []),
+            species_groups=list(data.get("gruposEspecies") or []),
+            source_trace=trace,
+            raw=data,
+        )
+
+    def list_courts(self, *, include_disabled: bool = False) -> list[ProviderOption]:
+        courts = self.get_catalog().courts
+        if include_disabled:
+            return courts
+        return [court for court in courts if not court.disabled]
+
+    def list_species(self) -> list[ProviderOption]:
+        return self.get_catalog().species
+
     def list_suggestions(self, text: str) -> list[str]:
-        data = self._request_json("GET", "/sugestoes", params={"texto": text})
+        if not text.strip():
+            return []
+        try:
+            data = self._request_json("GET", "/sugestoes", params={"texto": text})
+        except SourceUnavailableError as exc:
+            if "HTTP 404" in str(exc):
+                return []
+            raise
         if isinstance(data, list):
             return [str(item) for item in data]
         raise ParserContractChangedError("BNP suggestions response is not a list")
@@ -195,6 +235,31 @@ class BnpPangeaProvider(JurisprudenceProvider):
         except ValueError as exc:
             raise ParserContractChangedError("BNP response is not valid JSON") from exc
 
+    @staticmethod
+    def _map_options(items: list[Any], *, disabled_key: str | None = None) -> list[ProviderOption]:
+        options: list[ProviderOption] = []
+        for item in items:
+            if not isinstance(item, dict):
+                raise ParserContractChangedError("BNP catalog option is not an object")
+            code = str(item.get("sigla") or "")
+            description = str(item.get("descricao") or "")
+            if not code or not description:
+                raise ParserContractChangedError("BNP catalog option missing sigla/descricao")
+            options.append(
+                ProviderOption(
+                    code=code,
+                    description=description,
+                    alias=str(item.get("apelido") or "") or None,
+                    disabled=bool(item.get(disabled_key)) if disabled_key else False,
+                    metadata={
+                        key: value
+                        for key, value in item.items()
+                        if key not in {"sigla", "descricao", "apelido", disabled_key}
+                    },
+                )
+            )
+        return options
+
     def _respect_rate_limit(self) -> None:
         interval = self.config.rate_limit_interval
         if interval <= 0:
@@ -213,3 +278,13 @@ class BnpPangeaProvider(JurisprudenceProvider):
                 raise ParserContractChangedError(f"BNP search response missing {key!r}")
         if not isinstance(data.get("resultados"), list):
             raise ParserContractChangedError("BNP search resultados is not a list")
+
+    @staticmethod
+    def _validate_parameters_response(data: Any) -> None:
+        if not isinstance(data, dict):
+            raise ParserContractChangedError("BNP parameters response is not an object")
+        for key in ("orgaos", "especies"):
+            if key not in data:
+                raise ParserContractChangedError(f"BNP parameters response missing {key!r}")
+            if not isinstance(data.get(key), list):
+                raise ParserContractChangedError(f"BNP parameters {key!r} is not a list")

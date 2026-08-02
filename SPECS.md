@@ -35,6 +35,7 @@ Todo provider deve implementar:
 - `search(query)`
 - `get_decisions(precedent_id)`
 - `get_parameters()` quando a fonte tiver metadados publicos.
+- `get_catalog()` quando metadados puderem ser normalizados.
 
 Todo resultado deve conter:
 
@@ -46,3 +47,16 @@ Todo resultado deve conter:
 - URL ou endpoint publico;
 - data/hora de coleta;
 - limitacoes conhecidas.
+
+## BNP/Pangea v0.1.x
+
+O provider BNP/Pangea deve cobrir:
+
+- parametros brutos;
+- catalogo normalizado de orgaos e especies;
+- sugestoes publicas;
+- busca paginada;
+- agregacoes por orgao e especie;
+- decisoes vinculadas quando disponiveis;
+- testes sem rede;
+- testes live opcionais controlados por `NANOJURIS_RUN_LIVE=1`.

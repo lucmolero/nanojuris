@@ -7,7 +7,7 @@ from typing import Any
 
 from nanojuris.config import NanoJurisConfig
 from nanojuris.errors import UnsupportedProviderError
-from nanojuris.models import DecisionBundle, JurisprudenceQuery, SearchPage
+from nanojuris.models import DecisionBundle, JurisprudenceQuery, ProviderCatalog, SearchPage
 from nanojuris.providers.base import JurisprudenceProvider
 from nanojuris.providers.bnp_pangea import BnpPangeaProvider
 
@@ -66,6 +66,20 @@ class NanoJurisClient:
         """Return provider metadata."""
 
         return self._provider(source).get_parameters()
+
+    def get_catalog(self, *, source: str = "bnp_pangea") -> ProviderCatalog:
+        """Return a normalized provider catalog."""
+
+        return self._provider(source).get_catalog()
+
+    def list_suggestions(self, text: str, *, source: str = "bnp_pangea") -> list[str]:
+        """Return provider search suggestions when supported."""
+
+        provider = self._provider(source)
+        if hasattr(provider, "list_suggestions"):
+            suggestions = provider.list_suggestions(text)  # type: ignore[attr-defined]
+            return list(suggestions)
+        return []
 
     def _provider(self, source: str) -> JurisprudenceProvider:
         try:

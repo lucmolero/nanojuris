@@ -8,3 +8,10 @@ Todas as mudancas relevantes deste projeto serao documentadas aqui.
 - Provider BNP/Pangea com API publica de precedentes.
 - Modelos tipados para precedentes, casos paradigma, decisoes e pagina de busca.
 - Cliente Python, CLI, exportadores JSONL/Markdown e testes automatizados.
+
+## Unreleased
+
+- Catalogo normalizado do BNP/Pangea para orgaos e especies.
+- Sugestoes publicas de busca expostas no provider, cliente e CLI.
+- Fixtures cobrindo RG, RR, IAC, IRDR, SUM e SV.
+- Testes live opcionais controlados por `NANOJURIS_RUN_LIVE=1`.

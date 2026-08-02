@@ -119,3 +119,32 @@ class DecisionBundle:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(slots=True)
+class ProviderOption:
+    """Normalized option exposed by a public provider catalog."""
+
+    code: str
+    description: str
+    alias: str | None = None
+    disabled: bool = False
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class ProviderCatalog:
+    """Normalized catalog of courts, precedent species and provider metadata."""
+
+    source: str
+    courts: list[ProviderOption] = field(default_factory=list)
+    species: list[ProviderOption] = field(default_factory=list)
+    species_groups: list[dict[str, Any]] = field(default_factory=list)
+    source_trace: SourceTrace | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

@@ -9,6 +9,8 @@ from nanojuris.models import (
     JurisprudenceQuery,
     JurisprudenceResult,
     ParadigmCase,
+    ProviderCatalog,
+    ProviderOption,
     SearchPage,
     SourceTrace,
 )
@@ -20,6 +22,8 @@ __all__ = [
     "NanoJurisClient",
     "NanoJurisConfig",
     "ParadigmCase",
+    "ProviderCatalog",
+    "ProviderOption",
     "SearchPage",
     "SourceTrace",
 ]

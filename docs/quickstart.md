@@ -35,3 +35,15 @@ nanojuris buscar "ICMS consumidor final" --orgaos STF,STJ --tipos RG,RR --limite
 ```bash
 nanojuris precedente stf-rg-615
 ```
+
+## Liste catalogo BNP/Pangea
+
+```bash
+nanojuris parametros --catalogo
+```
+
+## Consulte sugestoes publicas
+
+```bash
+nanojuris sugestoes "icms"
+```

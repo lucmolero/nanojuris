@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from nanojuris.models import DecisionBundle, JurisprudenceQuery, SearchPage
+from nanojuris.models import DecisionBundle, JurisprudenceQuery, ProviderCatalog, SearchPage
 
 
 class JurisprudenceProvider(ABC):
@@ -25,3 +25,8 @@ class JurisprudenceProvider(ABC):
         """Return provider metadata when available."""
 
         return {}
+
+    def get_catalog(self) -> ProviderCatalog:
+        """Return a normalized provider catalog when available."""
+
+        return ProviderCatalog(source=self.name, raw=self.get_parameters())
