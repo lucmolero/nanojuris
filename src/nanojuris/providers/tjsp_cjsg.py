@@ -128,32 +128,13 @@ class TjspCjsgProvider(JurisprudenceProvider):
         )
 
     def get_document(self, document_id: str) -> CanonicalDocument:
-        cd_acordao, cd_foro = self._parse_precedent_id(document_id)
         bundle = self.get_decisions(document_id)
-        content = str(bundle.texts[0].get("content") if bundle.texts else "")
-        content_type = str(bundle.texts[0].get("content_type") if bundle.texts else "text/html")
-        content_bytes = content.encode("utf-8")
-        return CanonicalDocument(
-            id=document_id,
+        return cjsg_decision_bundle_to_document(
+            bundle,
+            document_id=document_id,
             source=self.name,
-            document_type="acordao",
-            content_type=content_type,
             title=f"TJSP/CJSG inteiro teor {document_id}",
-            text=content,
-            url=bundle.source_trace.source_url if bundle.source_trace else None,
-            sha256=hashlib.sha256(content_bytes).hexdigest(),
-            byte_size=len(content_bytes),
-            retrieved_at=bundle.source_trace.retrieved_at if bundle.source_trace else None,
-            access_status=AccessStatus.PUBLIC,
-            source_trace=bundle.source_trace,
-            extraction_trace=ExtractionTrace(
-                parser="tjsp_cjsg.get_document",
-                parser_version="1",
-                content_sha256=hashlib.sha256(content_bytes).hexdigest(),
-                content_bytes=len(content_bytes),
-                metadata={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
-            ),
-            raw_metadata={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
+            parser="tjsp_cjsg.get_document",
         )
 
     def get_capabilities(self) -> ProviderCapabilities:
@@ -434,6 +415,44 @@ def parse_cjsg_results(
         page_size=query.page_size,
         results=limited_results,
         source_trace=trace,
+    )
+
+
+def cjsg_decision_bundle_to_document(
+    bundle: DecisionBundle,
+    *,
+    document_id: str,
+    source: str,
+    title: str,
+    parser: str,
+) -> CanonicalDocument:
+    """Convert a CJSG public getArquivo response into a canonical document."""
+
+    content = str(bundle.texts[0].get("content") if bundle.texts else "")
+    content_type = str(bundle.texts[0].get("content_type") if bundle.texts else "text/html")
+    content_bytes = content.encode("utf-8")
+    metadata = dict(bundle.raw or {})
+    return CanonicalDocument(
+        id=document_id,
+        source=source,
+        document_type="acordao",
+        content_type=content_type,
+        title=title,
+        text=content,
+        url=bundle.source_trace.source_url if bundle.source_trace else None,
+        sha256=hashlib.sha256(content_bytes).hexdigest(),
+        byte_size=len(content_bytes),
+        retrieved_at=bundle.source_trace.retrieved_at if bundle.source_trace else None,
+        access_status=AccessStatus.PUBLIC,
+        source_trace=bundle.source_trace,
+        extraction_trace=ExtractionTrace(
+            parser=parser,
+            parser_version="1",
+            content_sha256=hashlib.sha256(content_bytes).hexdigest(),
+            content_bytes=len(content_bytes),
+            metadata=metadata,
+        ),
+        raw_metadata=metadata,
     )
 
 

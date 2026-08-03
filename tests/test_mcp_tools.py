@@ -5,6 +5,7 @@ import pytest
 from nanojuris.client import NanoJurisClient
 from nanojuris.mcp_tools import (
     export_results_tool,
+    get_decisions_tool,
     get_document_tool,
     list_courts_tool,
     list_sources_tool,
@@ -61,7 +62,11 @@ class FakeProvider:
         )
 
     def get_decisions(self, precedent_id: str) -> DecisionBundle:
-        return DecisionBundle(precedent_id=precedent_id, source="fake")
+        return DecisionBundle(
+            precedent_id=precedent_id,
+            source="fake",
+            texts=[{"content": "Decisao publica", "content_type": "text/plain"}],
+        )
 
     def get_document(self, document_id: str) -> CanonicalDocument:
         return CanonicalDocument(
@@ -206,6 +211,17 @@ def test_search_jurisprudence_tool_returns_canonical_records_and_limits_page_siz
     assert payload["results"][0]["subject"] == "Homicidio Qualificado"
 
 
+def test_search_jurisprudence_tool_normalizes_invalid_page():
+    payload = search_jurisprudence_tool(
+        "homicidio",
+        source="fake",
+        page=0,
+        client=_client(),
+    )
+
+    assert payload["page"] == 1
+
+
 def test_search_jurisprudence_tool_can_return_normalized_page():
     payload = search_jurisprudence_tool(
         "homicidio",
@@ -241,6 +257,16 @@ def test_get_document_tool_returns_canonical_document():
     assert payload["document_id"] == "doc-1"
     assert payload["document"]["document_type"] == "acordao"
     assert payload["document"]["text"] == "Inteiro teor publico"
+
+
+def test_get_decisions_tool_returns_decision_bundle():
+    payload = get_decisions_tool("prec-1", source="fake", client=_client())
+
+    assert payload["precedent_id"] == "prec-1"
+    assert payload["bundle"]["source"] == "fake"
+    assert payload["bundle"]["texts"] == [
+        {"content": "Decisao publica", "content_type": "text/plain"}
+    ]
 
 
 def test_store_stats_tool_returns_local_store_counts(tmp_path):

@@ -113,6 +113,19 @@ Parametros:
 Use para agentes que precisam anexar texto bruto auditavel, hash, tamanho,
 trace de fonte e status de acesso antes de qualquer etapa posterior.
 
+### `get_decisions`
+
+Recupera textos publicos vinculados ao identificador de uma fonte quando o
+provider expõe um `DecisionBundle`.
+
+Parametros:
+
+- `precedent_id`
+- `source`
+
+Use quando a fonte retorna um conjunto de textos/decisoes vinculadas antes de
+haver um documento canonico unico.
+
 ### `store_stats`
 
 Retorna contagens agregadas de um store SQLite local criado pela NanoJuris.
@@ -209,10 +222,10 @@ A resposta tambem inclui `total`, `has_more` e `next_offset`.
 Recupera decisao ou precedente por identificador publico/canonico quando a fonte
 suportar.
 
-### `get_document`
+### Normalizacao de relevancia
 
-Recupera documento publico associado a uma decisao quando disponivel, respeitando
-status de acesso.
+Adicionar filtros opcionais de pos-processamento por ramo, classe, assunto e
+tipo de decisao para reduzir falsos positivos em fontes de texto livre amplo.
 
 ## Ordem de implementacao MCP
 
@@ -221,10 +234,10 @@ status de acesso.
 2. Reusar `NanoJurisClient.search` em `search_jurisprudence`. Implementado.
 3. Reusar canonical mappers para respostas de dados objetivos. Implementado.
 4. Adicionar limites de pagina, tamanho e timeout por tool. Implementado para
-  tamanho de pagina.
+  pagina minima e tamanho de pagina.
 5. Cobrir tools com testes sem rede. Implementado.
 6. Expor store local para agentes. Implementado com `store_stats`,
   `store_query`, `store_get`, `store_runs`, `store_run`,
   `store_run_records` e `store_export_run`.
-7. Implementar `get_decision` e `get_document`.
+7. Implementar `get_decisions` e `get_document`. Implementado.
 8. Adicionar exemplos de configuracao em clientes MCP.

@@ -18,6 +18,7 @@ from nanojuris.errors import (
 )
 from nanojuris.models import (
     AccessStatus,
+    CanonicalDocument,
     DecisionBundle,
     JurisprudenceQuery,
     ProviderCapabilities,
@@ -25,7 +26,11 @@ from nanojuris.models import (
     SourceTrace,
 )
 from nanojuris.providers.base import JurisprudenceProvider
-from nanojuris.providers.tjsp_cjsg import diagnose_cjsg_access, parse_cjsg_results
+from nanojuris.providers.tjsp_cjsg import (
+    cjsg_decision_bundle_to_document,
+    diagnose_cjsg_access,
+    parse_cjsg_results,
+)
 
 
 class TjmsCjsgProvider(JurisprudenceProvider):
@@ -87,6 +92,16 @@ class TjmsCjsgProvider(JurisprudenceProvider):
             raw={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
         )
 
+    def get_document(self, document_id: str) -> CanonicalDocument:
+        bundle = self.get_decisions(document_id)
+        return cjsg_decision_bundle_to_document(
+            bundle,
+            document_id=document_id,
+            source=self.name,
+            title=f"TJMS/CJSG inteiro teor {document_id}",
+            parser="tjms_cjsg.get_document",
+        )
+
     def get_capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
             source=self.name,
@@ -96,7 +111,7 @@ class TjmsCjsgProvider(JurisprudenceProvider):
             search_modes=["full_text", "summary", "case_number", "date_range", "decision_type"],
             document_types=["acordao", "homologation", "decision"],
             content_formats=["html"],
-            canonical_records=["CanonicalDecision"],
+            canonical_records=["CanonicalDecision", "CanonicalDocument"],
             extracted_fields=[
                 "case_number",
                 "decision_type",

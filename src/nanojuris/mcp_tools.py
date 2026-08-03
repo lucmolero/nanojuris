@@ -76,6 +76,7 @@ def search_jurisprudence_tool(
     """Search a source and return paginated normalized or canonical results."""
 
     active_client = client or NanoJurisClient()
+    normalized_page = _page(page)
     limited_page_size = _limit_page_size(page_size)
     if canonical:
         records = active_client.search_canonical(
@@ -84,12 +85,12 @@ def search_jurisprudence_tool(
             courts=courts or [],
             types=types or [],
             number=number,
-            page=page,
+            page=normalized_page,
             page_size=limited_page_size,
         )
         return {
             "source": source,
-            "page": page,
+            "page": normalized_page,
             "page_size": limited_page_size,
             "canonical": True,
             "results": [_to_jsonable(record) for record in records],
@@ -100,7 +101,7 @@ def search_jurisprudence_tool(
         courts=courts or [],
         types=types or [],
         number=number,
-        page=page,
+        page=normalized_page,
         page_size=limited_page_size,
     )
     return _to_jsonable(search_page)
@@ -127,7 +128,7 @@ def export_results_tool(
         courts=courts or [],
         types=types or [],
         number=number,
-        page=page,
+        page=_page(page),
         page_size=_limit_page_size(page_size),
     )
     content = _format_search_page(search_page, output_format)
@@ -152,6 +153,23 @@ def get_document_tool(
         "source": source,
         "document_id": document_id,
         "document": _to_jsonable(document),
+    }
+
+
+def get_decisions_tool(
+    precedent_id: str,
+    *,
+    source: str = "bnp_pangea",
+    client: NanoJurisClient | None = None,
+) -> dict[str, Any]:
+    """Return public decision texts linked to a provider identifier."""
+
+    active_client = client or NanoJurisClient()
+    bundle = active_client.get_decisions(precedent_id, source=source)
+    return {
+        "source": source,
+        "precedent_id": precedent_id,
+        "bundle": _to_jsonable(bundle),
     }
 
 
@@ -330,6 +348,10 @@ def _format_search_page(search_page: Any, output_format: str) -> str:
 
 def _limit_page_size(page_size: int) -> int:
     return max(1, min(page_size, MAX_MCP_PAGE_SIZE))
+
+
+def _page(page: int) -> int:
+    return max(1, page)
 
 
 def _offset(offset: int) -> int:

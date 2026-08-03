@@ -7,6 +7,7 @@ from typing import Any
 
 from nanojuris.mcp_tools import (
     export_results_tool,
+    get_decisions_tool,
     get_document_tool,
     list_courts_tool,
     list_sources_tool,
@@ -127,6 +128,12 @@ def create_server() -> Any:
         """Return one public full-text document as canonical extraction data."""
 
         return get_document_tool(document_id, source=source)
+
+    @server.tool()
+    def get_decisions(precedent_id: str, source: str = "bnp_pangea") -> dict[str, Any]:
+        """Return public decision texts linked to a provider identifier."""
+
+        return get_decisions_tool(precedent_id, source=source)
 
     @server.tool()
     def store_stats(db_path: str) -> dict[str, Any]:

@@ -7,7 +7,11 @@ import requests
 
 from nanojuris.canonical import search_page_to_canonical
 from nanojuris.config import NanoJurisConfig
-from nanojuris.errors import RateLimitDetectedError, SourceUnavailableError
+from nanojuris.errors import (
+    ParserContractChangedError,
+    RateLimitDetectedError,
+    SourceUnavailableError,
+)
 from nanojuris.models import CanonicalDecision, JurisprudenceQuery, SourceTrace
 from nanojuris.providers.tjdf_juris import (
     TjdfJurisProvider,
@@ -156,6 +160,28 @@ def test_parse_tjdf_detail_accepts_fallback_document_id():
 
     assert result.id == "tjdf-acordao-1917641"
     assert result.source_trace is not None
+
+
+def test_get_document_rejects_detail_without_acordao_fields():
+    provider = TjdfJurisProvider(
+        NanoJurisConfig(rate_limit_interval=0),
+        session=FakeSession([FakeResponse("<html><title>SISTJWEB</title></html>")]),
+    )
+
+    with pytest.raises(ParserContractChangedError, match="returned no acórdão fields"):
+        provider.get_document("not-a-real-id")
+
+
+def test_get_document_accepts_search_result_id_prefix():
+    provider = TjdfJurisProvider(
+        NanoJurisConfig(rate_limit_interval=0),
+        session=FakeSession([FakeResponse(load_fixture("tjdf_juris_detail.html"))]),
+    )
+
+    document = provider.get_document("tjdf-acordao-1917641")
+
+    assert document.id == "tjdf-acordao-1917641"
+    assert document.raw_metadata == {"numeroDoDocumento": "1917641"}
 
 
 @pytest.mark.parametrize(

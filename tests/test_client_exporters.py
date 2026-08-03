@@ -398,6 +398,12 @@ def test_search_page_to_canonical_splits_decisions_and_precedents():
                 type="acordao",
             ),
             JurisprudenceResult(
+                id="decision-2",
+                source="trf4_eproc_jurisprudencia",
+                court="TRF4",
+                type="despacho/decisao da vice-presidencia",
+            ),
+            JurisprudenceResult(
                 id="precedent-1",
                 source="bnp_pangea",
                 court="STJ",
@@ -409,4 +415,5 @@ def test_search_page_to_canonical_splits_decisions_and_precedents():
     canonical = search_page_to_canonical(page)
 
     assert isinstance(canonical[0], CanonicalDecision)
-    assert isinstance(canonical[1], CanonicalPrecedent)
+    assert isinstance(canonical[1], CanonicalDecision)
+    assert isinstance(canonical[2], CanonicalPrecedent)

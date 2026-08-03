@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 from nanojuris.config import NanoJurisConfig
 from nanojuris.errors import (
+    ParserContractChangedError,
     RateLimitDetectedError,
     SourceUnavailableError,
 )
@@ -87,13 +88,15 @@ class TjdfJurisProvider(JurisprudenceProvider):
         )
 
     def get_decisions(self, precedent_id: str) -> DecisionBundle:
+        document_id = _normalize_tjdf_document_id(precedent_id)
         html = self._request_text(
-            "GET", TJDF_JURIS_ENDPOINT, params=_build_detail_params(precedent_id)
+            "GET", TJDF_JURIS_ENDPOINT, params=_build_detail_params(document_id)
         )
+        _extract_detail_fields_or_raise(html, document_id)
         trace = SourceTrace(
             provider=self.name,
             endpoint=TJDF_JURIS_ENDPOINT,
-            query=_build_detail_params(precedent_id),
+            query=_build_detail_params(document_id),
             source_url=urljoin(self.config.tjdf_juris_url, TJDF_JURIS_ENDPOINT.lstrip("/")),
             limitations=["Detalhe publico de acordao TJDFT/SISTJ."],
         )
@@ -102,17 +105,20 @@ class TjdfJurisProvider(JurisprudenceProvider):
             source=self.name,
             texts=[{"content": html, "content_type": "text/html"}],
             source_trace=trace,
-            raw={"numeroDoDocumento": precedent_id},
+            raw={"numeroDoDocumento": document_id},
         )
 
     def get_document(self, document_id: str) -> CanonicalDocument:
+        normalized_document_id = _normalize_tjdf_document_id(document_id)
+        canonical_document_id = f"tjdf-acordao-{normalized_document_id}"
         html = self._request_text(
-            "GET", TJDF_JURIS_ENDPOINT, params=_build_detail_params(document_id)
+            "GET", TJDF_JURIS_ENDPOINT, params=_build_detail_params(normalized_document_id)
         )
+        _extract_detail_fields_or_raise(html, normalized_document_id)
         trace = SourceTrace(
             provider=self.name,
             endpoint=TJDF_JURIS_ENDPOINT,
-            query=_build_detail_params(document_id),
+            query=_build_detail_params(normalized_document_id),
             source_url=urljoin(self.config.tjdf_juris_url, TJDF_JURIS_ENDPOINT.lstrip("/")),
             limitations=["Documento HTML publico do TJDFT/SISTJ."],
         )
@@ -120,7 +126,7 @@ class TjdfJurisProvider(JurisprudenceProvider):
         text = _normalize_spaces(soup.get_text(" ", strip=True))
         content_bytes = html.encode("utf-8")
         return CanonicalDocument(
-            id=f"tjdf-acordao-{document_id}",
+            id=canonical_document_id,
             source=self.name,
             document_type="acordao",
             content_type="text/html",
@@ -137,9 +143,9 @@ class TjdfJurisProvider(JurisprudenceProvider):
                 parser_version="1",
                 content_sha256=hashlib.sha256(content_bytes).hexdigest(),
                 content_bytes=len(content_bytes),
-                metadata={"numeroDoDocumento": document_id},
+                metadata={"numeroDoDocumento": normalized_document_id},
             ),
-            raw_metadata={"numeroDoDocumento": document_id},
+            raw_metadata={"numeroDoDocumento": normalized_document_id},
         )
 
     def get_capabilities(self) -> ProviderCapabilities:
@@ -247,7 +253,7 @@ def parse_tjdf_result_ids(html: str) -> list[str]:
 
 
 def parse_tjdf_detail(html: str, *, document_id: str, trace: SourceTrace) -> JurisprudenceResult:
-    fields = _extract_labeled_fields(html)
+    fields = _extract_detail_fields_or_raise(html, document_id)
     case_text = fields.get("classe_do_processo", "")
     registry_number = fields.get("registro_do_acordao_numero") or document_id
     judgment_date = fields.get("data_de_julgamento")
@@ -357,6 +363,10 @@ def _build_detail_params(document_id: str) -> dict[str, str]:
     }
 
 
+def _normalize_tjdf_document_id(document_id: str) -> str:
+    return re.sub(r"^tjdf-acordao-", "", document_id.strip(), flags=re.I)
+
+
 def _extract_labeled_fields(html: str) -> dict[str, str]:
     soup = BeautifulSoup(html, "html.parser")
     fields: dict[str, str] = {}
@@ -367,6 +377,18 @@ def _extract_labeled_fields(html: str) -> dict[str, str]:
         value = _normalize_spaces(value_node.get_text(" ", strip=True)) if value_node else ""
         if label and value:
             fields[label] = value
+    return fields
+
+
+def _extract_detail_fields_or_raise(html: str, document_id: str) -> dict[str, str]:
+    fields = _extract_labeled_fields(html)
+    if not any(
+        fields.get(key)
+        for key in ("ementa", "classe_do_processo", "registro_do_acordao_numero")
+    ):
+        raise ParserContractChangedError(
+            f"TJDFT/SISTJ detail for document {document_id!r} returned no acórdão fields"
+        )
     return fields
 
 

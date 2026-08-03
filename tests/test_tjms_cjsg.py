@@ -100,6 +100,19 @@ def test_provider_get_decisions_builds_tjms_getarquivo_url():
     assert session.calls[0]["url"].endswith("getArquivo.do?cdAcordao=224478&cdForo=0")
 
 
+def test_provider_get_document_returns_canonical_document():
+    session = FakeSession([FakeResponse("<html>inteiro teor publico</html>")])
+    provider = TjmsCjsgProvider(NanoJurisConfig(rate_limit_interval=0), session=session)
+
+    document = provider.get_document("tjms-cjsg-224478-0")
+
+    assert document.id == "tjms-cjsg-224478-0"
+    assert document.source == "tjms_cjsg"
+    assert document.document_type == "acordao"
+    assert document.text == "<html>inteiro teor publico</html>"
+    assert document.raw_metadata == {"cd_acordao": "224478", "cd_foro": "0"}
+
+
 def test_provider_detects_access_control_without_bypass():
     session = FakeSession([FakeResponse("<html><div class='g-recaptcha'></div></html>")])
     provider = TjmsCjsgProvider(NanoJurisConfig(rate_limit_interval=0), session=session)

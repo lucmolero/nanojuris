@@ -101,6 +101,15 @@ def _build_trace(result: JurisprudenceResult, *, parser_version: str) -> Extract
 
 def _looks_like_decision(result: JurisprudenceResult) -> bool:
     normalized_type = result.type.strip().lower()
+    decision_markers = {
+        "decisao",
+        "decisão",
+        "despacho",
+        "sentenca",
+        "sentença",
+    }
+    if any(marker in normalized_type for marker in decision_markers):
+        return True
     return normalized_type in {
         "acordao",
         "acórdão",
