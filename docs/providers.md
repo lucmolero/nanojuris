@@ -1,5 +1,425 @@
 # Providers
 
+Cada provider deve declarar suas capacidades objetivas por meio de
+`ProviderCapabilities`. Isso permite descoberta por Python, CLI e MCP sem
+executar uma busca real.
+
+```bash
+nanojuris fontes
+nanojuris diagnostico --fonte bnp_pangea
+```
+
+Detalhes do contrato estao em [source-capabilities.md](source-capabilities.md).
+Novos providers devem usar os contratos de aquisicao e parsing descritos em
+[extraction-pipeline.md](extraction-pipeline.md).
+O checklist completo para implementar novas fontes esta em
+[provider-development.md](provider-development.md).
+Antes de implementar uma rota nova, use o fluxo economico de descoberta em
+[source-discovery.md](source-discovery.md).
+
+## `comunica_pje`
+
+Provider para comunicacoes judiciais publicas do Comunica PJe/DJEN.
+
+Endpoint publico usado:
+
+```text
+GET /api/v1/comunicacao
+```
+
+### Escopo
+
+O provider nao e uma base de acordaos ou jurisprudencia consolidada. Ele cobre
+publicacoes/comunicacoes objetivas, como intimacoes e editais, com texto,
+tribunal, orgao, classe, numero do processo e link publico quando a API retorna.
+
+Filtros reproduzidos com sessao HTTP limpa:
+
+```text
+texto
+siglaTribunal
+numeroProcesso
+dataDisponibilizacaoInicio
+dataDisponibilizacaoFim
+pagina
+size
+```
+
+Exemplo validado na descoberta:
+
+```text
+GET https://comunicaapi.pje.jus.br/api/v1/comunicacao?texto=infanticidio&pagina=0&size=5
+```
+
+Retornou JSON publico com `count=1260`; com `siglaTribunal=TJSP`, retornou
+`count=131`; com `siglaTribunal=STJ`, retornou `count=53`. A variante acentuada
+`infanticídio` retornou a mesma contagem observada.
+
+O filtro por data de disponibilizacao tambem foi validado com sessao limpa:
+
+```text
+dataDisponibilizacaoInicio=2026-07-31&dataDisponibilizacaoFim=2026-07-31
+```
+
+Para `infanticidio`, retornou `count=1` e item com
+`data_disponibilizacao=2026-07-31`. Os parametros curtos `data_inicio` e
+`data_fim` foram testados e nao filtraram a resposta observada.
+
+### Uso
+
+```bash
+nanojuris buscar "infanticidio" --fonte comunica_pje --orgaos TJSP --limite 5
+nanojuris buscar "infanticidio" --fonte comunica_pje --publicacao-de 2026-07-31 --publicacao-ate 2026-07-31
+nanojuris buscar "" --fonte comunica_pje --numero 1500780-26.2025.8.26.0603
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+page = client.search(
+  "infanticidio",
+  source="comunica_pje",
+  courts=["TJSP"],
+  published_from="2026-07-31",
+  published_to="2026-07-31",
+)
+records = client.search_canonical("infanticidio", source="comunica_pje")
+```
+
+Campos extraidos:
+
+```text
+communication_id
+court
+case_number
+case_class
+publication_date
+communication_type
+source_body
+summary
+document_url
+```
+
+Limitacoes:
+
+- comunicacoes judiciais nao substituem acordaos, sentencas ou inteiro teor;
+- a API pode devolver ate 100 itens mesmo quando `size` menor e o provider limita
+  localmente;
+- `numeroProcesso` deve ser enviado apenas com digitos.
+
+## `tjdf_juris`
+
+Provider para jurisprudencia publica do TJDFT/SISTJ.
+
+Rotas publicas usadas:
+
+```text
+GET /IndexadorAcordaos-web/sistj?nomeDaPagina=buscaLivre
+GET /IndexadorAcordaos-web/sistj?nomeDaPagina=buscaLivre2
+GET /IndexadorAcordaos-web/sistj?comando=abrirDadosDoAcordao&numeroDoDocumento=<id>
+```
+
+### Escopo
+
+O provider cobre acordaos e bases publicas indexadas pelo SISTJ/TJDFT. A
+descoberta foi validada com sessao HTTP limpa usando termo `infanticidio`, com
+31 resultados observados e IDs de documento expostos na pagina de resultados.
+
+Campos enviados:
+
+```text
+argumentoDePesquisa
+ementa
+numero
+dataInicio
+dataFim
+numeroDaPaginaAtual
+quantidadeDeRegistros
+```
+
+Campos extraidos do detalhe:
+
+```text
+registry_number
+case_number
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+decision_outcome
+document_url
+```
+
+### Uso
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjdf_juris --limite 5
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+page = client.search("infanticidio", source="tjdf_juris", page_size=5)
+records = client.search_canonical("infanticidio", source="tjdf_juris")
+```
+
+Limitacoes:
+
+- contrato HTML legado, sujeito a mudancas de layout;
+- inteiro teor PJe pode depender de link/documento externo;
+- coletas paginadas devem respeitar rate limit e preservar `numeroDoDocumento`.
+
+## `tjac_cjsg`
+
+Provider para jurisprudencia publica do TJAC/CJSG, descoberto por probe limpo na
+familia e-SAJ/CJSG e validado com sessao HTTP sem cookies de navegador.
+
+Rotas publicas usadas:
+
+```text
+POST /resultadoCompleta.do
+GET  /getArquivo.do?cdAcordao=<id>&cdForo=<foro>
+```
+
+Payload minimo validado:
+
+```text
+dados.buscaInteiroTeor
+dados.buscaEmenta
+dados.nuProcOrigem
+dados.dtJulgamentoInicio
+dados.dtJulgamentoFim
+dados.origensSelecionadas
+tipoDecisaoSelecionados
+dados.ordenarPor
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjac_cjsg --limite 5
+```
+
+Na descoberta limpa, o TJAC/CJSG retornou `5` resultados para `infanticidio`,
+sem captcha no fluxo testado. O parser CJSG leu numero do processo, classe,
+assunto, relator, orgao julgador, datas, ementa e link de inteiro teor.
+
+## `tjal_cjsg`
+
+Provider para jurisprudencia publica do TJAL/CJSG, descoberto por probe limpo na
+familia e-SAJ/CJSG e validado com sessao HTTP sem cookies de navegador.
+
+Rotas publicas usadas:
+
+```text
+POST /resultadoCompleta.do
+GET  /getArquivo.do?cdAcordao=<id>&cdForo=<foro>
+```
+
+Payload minimo validado:
+
+```text
+dados.buscaInteiroTeor
+dados.buscaEmenta
+dados.nuProcOrigem
+dados.dtJulgamentoInicio
+dados.dtJulgamentoFim
+dados.origensSelecionadas
+tipoDecisaoSelecionados
+dados.ordenarPor
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjal_cjsg --limite 5
+```
+
+Na descoberta limpa, o TJAL/CJSG retornou `12` resultados para `infanticidio`,
+sem captcha no fluxo testado. O parser CJSG leu numero do processo, classe,
+assunto, relator, orgao julgador, datas, ementa e link de inteiro teor.
+
+## `tjam_cjsg`
+
+Provider para jurisprudencia publica do TJAM/CJSG, descoberto por probe limpo na
+familia e-SAJ/CJSG e validado com sessao HTTP sem cookies de navegador.
+
+Rotas publicas usadas:
+
+```text
+POST /resultadoCompleta.do
+GET  /getArquivo.do?cdAcordao=<id>&cdForo=<foro>
+```
+
+Payload minimo validado:
+
+```text
+dados.buscaInteiroTeor
+dados.buscaEmenta
+dados.nuProcOrigem
+dados.dtJulgamentoInicio
+dados.dtJulgamentoFim
+dados.origensSelecionadas
+tipoDecisaoSelecionados
+dados.ordenarPor
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjam_cjsg --limite 5
+```
+
+Na descoberta limpa, o TJAM/CJSG retornou `12` resultados para `infanticidio`,
+sem captcha no fluxo testado. O parser CJSG leu numero do processo, classe,
+assunto, relator, orgao julgador, datas, ementa e link de inteiro teor.
+
+## `tjms_cjsg`
+
+Provider para jurisprudencia publica do TJMS/CJSG, descoberto a partir de
+projetos abertos de scraping e validado com sessao HTTP limpa.
+
+Rotas publicas usadas:
+
+```text
+POST /resultadoCompleta.do
+GET  /trocaDePagina.do?tipoDeDecisao=<tipo>&pagina=<n>&conversationId=
+GET  /getArquivo.do?cdAcordao=<id>&cdForo=<foro>
+```
+
+Payload minimo validado:
+
+```text
+dados.buscaInteiroTeor
+dados.buscaEmenta
+dados.nuProcOrigem
+dados.dtJulgamentoInicio
+dados.dtJulgamentoFim
+dados.origensSelecionadas
+tipoDecisaoSelecionados
+dados.ordenarPor
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjms_cjsg --limite 5
+```
+
+Na descoberta limpa, o TJMS/CJSG retornou `22` resultados para `infanticidio`,
+sem captcha no fluxo testado, e o parser CJSG leu classe, assunto, comarca,
+relator, orgao julgador, datas, ementa e link de inteiro teor.
+
+## `stm_jurisprudencia`
+
+Provider para jurisprudencia publica do STM/JMU, descoberto por probe limpo no
+portal `https://jurisprudencia.stm.jus.br`.
+
+Rotas publicas usadas:
+
+```text
+GET /consulta.php?search_filter_option=jurisprudencia&search_filter=busca_avancada&...
+GET https://eproc2g.stm.jus.br/eproc_2g_prod/externo_controlador.php?acao=visualizar_acordao&uuid=<uuid>
+```
+
+Parametros principais:
+
+```text
+q
+fqx_ementa
+fqx_inteiro_teor
+fqx_numero_jurisprudencia
+fqx_data_publicacao_inicio
+fqx_data_publicacao_fim
+fqx_data_decisao_inicio
+fqx_data_decisao_fim
+```
+
+Campos extraidos:
+
+```text
+case_number
+case_class
+rapporteur
+subject
+judgment_date
+publication_date
+summary
+document_url
+uuid
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "deserção" --fonte stm_jurisprudencia --limite 5
+```
+
+Na descoberta limpa, o STM/JMU retornou HTML publico sem captcha, com paineis
+`div.panel.panel-default`, ementa em `blockquote`, metadados em `dl` e botao
+`Inteiro Teor` apontando para URL publica do eproc/STM. O provider declara
+suporte a `get_document` para o HTML de inteiro teor publico.
+
+## `trf4_eproc_jurisprudencia`
+
+Provider para jurisprudencia publica do eproc/TRF4, descoberto por probe limpo em
+`https://jurisprudencia.trf4.jus.br`.
+
+Rotas publicas usadas:
+
+```text
+POST /externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados
+GET  /externo_controlador.php?acao=jurisprudencia@jurisprudencia/download_inteiro_teor&id_jurisprudencia=<id>
+```
+
+Campos enviados:
+
+```text
+txtPesquisa
+rdoCampo
+txtProcesso
+dtDecisaoInicio
+dtDecisaoFim
+dtPublicacaoInicio
+dtPublicacaoFim
+chkAgruparResultados
+```
+
+Campos extraidos:
+
+```text
+case_number
+decision_type
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+document_url
+full_text_url
+id_jurisprudencia
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "deserção" --fonte trf4_eproc_jurisprudencia --limite 5
+```
+
+Na descoberta limpa, o eproc/TRF4 retornou HTML publico sem captcha, com cards
+`.resultadoItem`, numero CNJ, classe, orgao julgador, relator, datas, trecho de
+decisao e link de inteiro teor. A rota de download do inteiro teor retornou HTML
+publico validado, entao o provider declara suporte a `get_document`.
+
 ## `bnp_pangea`
 
 Provider inicial do NanoJuris.
@@ -21,7 +441,14 @@ O provider expoe tres niveis de acesso:
 client.get_parameters()
 client.get_catalog()
 client.list_suggestions("icms")
+client.get_document("tjsp-cjsg-20787558-0", source="tjsp_cjsg")
+client.get_document("0003938-14.2017.8.26.0323", source="tjsp_esaj_cpopg")
 ```
+
+`get_document` deve ser implementado apenas quando a fonte oficial oferece
+inteiro teor publico sem login, captcha ou acesso restrito. O retorno deve ser um
+`CanonicalDocument` com `sha256`, `byte_size`, `source_trace` e
+`extraction_trace` sempre que possivel.
 
 `get_parameters()` retorna o JSON bruto da fonte, util para auditoria tecnica.
 `get_catalog()` converte orgaos e especies para modelos estaveis:
@@ -114,6 +541,12 @@ Busca:
 nanojuris buscar "ICMS" --orgaos STF,STJ --tipos RG,RR --limite 5
 ```
 
+CSV de extracao objetiva:
+
+```bash
+nanojuris buscar "ICMS" --orgaos STF,STJ --tipos RG,RR --limite 5 --formato csv
+```
+
 ### Testes live opcionais
 
 Os testes live ficam desligados por padrao e consultam fonte publica real apenas
@@ -124,17 +557,48 @@ $env:NANOJURIS_RUN_LIVE = "1"
 python -m pytest -m live
 ```
 
-## Planejados
+## `stj_scon`
 
-- `stj`
-- `stf`
-- `tse`
-- `trf4`
-- `tst`
+Provider inicial para acordaos publicos do STJ/SCON.
+
+Escopo atual:
+
+```text
+GET /SCON/acordaos/
+```
+
+O provider declara capabilities, possui parser offline com fixture sanitizada e
+normaliza resultados para `JurisprudenceResult` e `CanonicalDecision`.
+
+Campos extraidos no contrato inicial:
+
+```text
+case_number
+registry_number
+decision_type
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+document_url
+```
+
+Limitacoes:
+
+- primeira versao foca acordaos SCON;
+- inteiro teor sera ampliado em etapa posterior;
+- o provider nao reinterpreta operadores oficiais do STJ;
+- captcha, login ou controle de acesso sao tratados como estado da fonte, sem
+  bypass.
+
+Ficha publica: [stj-source-profile.md](stj-source-profile.md).
+Pesquisa tecnica: [stj-provider-research.md](stj-provider-research.md).
 
 ### Pesquisa tecnica STJ
 
-A primeira pesquisa tecnica para o futuro provider STJ esta em [stj-provider-research.md](stj-provider-research.md). Ela separa os fluxos de SCON, precedentes qualificados e publicacoes, define criterios de fixture e marca o escopo inicial do provider como SCON para acordaos e inteiro teor.
+A primeira pesquisa tecnica para o STJ esta em [stj-provider-research.md](stj-provider-research.md). Ela separa os fluxos de SCON, precedentes qualificados e publicacoes, define criterios de fixture e marca o escopo inicial como SCON para acordaos.
 
 ## `tjsp_cjsg`
 
@@ -192,6 +656,176 @@ bypass. Quando isso acontece, o provider levanta `AccessControlRequiredError`.
 $env:NANOJURIS_RUN_TJSP_LIVE = "1"
 python -m pytest tests/test_tjsp_cjsg_live.py
 ```
+
+## `tjsp_eproc_jurisprudencia`
+
+Provider para a jurisprudencia publica do eproc/TJSP.
+
+### Escopo
+
+```text
+POST /externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados
+```
+
+O provider busca resultados publicos de jurisprudencia do eproc/TJSP e normaliza
+cards `.resultadoItem` para `JurisprudenceResult` e `CanonicalDecision`. O texto
+extraido vem do proprio card publico de resultado.
+
+Campos enviados:
+
+```text
+txtPesquisa
+rdoCampo
+txtProcesso
+dtDecisaoInicio
+dtDecisaoFim
+dtPublicacaoInicio
+dtPublicacaoFim
+```
+
+Campos extraidos:
+
+```text
+case_number
+decision_type
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+document_url
+full_text_url
+id_jurisprudencia
+```
+
+`full_text_url` e preservado como metadado quando a fonte publica o informa, mas
+na validacao live a rota de inteiro teor separada redirecionou/retornou controle
+de acesso. Por isso o provider nao declara suporte a `get_document` para esta
+fonte.
+
+### Uso
+
+```bash
+nanojuris buscar "infanticidio" --fonte tjsp_eproc_jurisprudencia --limite 5
+nanojuris buscar "" --fonte tjsp_eproc_jurisprudencia --numero 4002141-42.2025.8.26.0132
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+page = client.search("infanticidio", source="tjsp_eproc_jurisprudencia", page_size=5)
+records = client.search_canonical("infanticidio", source="tjsp_eproc_jurisprudencia")
+```
+
+### Controle de acesso
+
+A rota foi validada com `requests` limpo, mas pode mudar hashes, filtros ou
+exigir controle de acesso. O NanoJuris nao reutiliza cookies de navegador e nao
+implementa bypass.
+
+## `tjsp_esaj_cpopg`
+
+Provider para consulta processual publica de primeiro grau no e-SAJ/TJSP.
+
+### Escopo
+
+```text
+GET /cpopg/search.do?cbPesquisa=NUMPROC&...
+GET /cpopg/search.do?cbPesquisa=NMPARTE&dadosConsulta.valorConsulta=<nome>
+GET /cpopg/search.do?cbPesquisa=NUMOAB&dadosConsulta.valorConsulta=<oab>
+GET /cpopg/show.do?processo.codigo=<codigo>&processo.foro=<foro>&processo.numero=<numero>
+```
+
+O fluxo por numero CNJ consulta `search.do`, segue o redirect oficial para
+`show.do` e normaliza o HTML publico como `CanonicalDocument`. As buscas por
+lista usam o seletor oficial `cbPesquisa`; nome da parte (`NMPARTE`) e OAB
+(`NUMOAB`) foram reproduzidos com sessao HTTP limpa. Os demais modos expostos
+pelo formulario ficam mapeados na API para descoberta responsavel e podem variar
+conforme a fonte.
+
+Modos de busca declarados:
+
+```text
+case_number -> NUMPROC
+party_name -> NMPARTE
+party_document -> DOCPARTE
+lawyer_name -> NMADVOGADO
+oab -> NUMOAB
+precatory_number -> PRECATORIA
+police_document -> DOCDELEG
+cda -> NUMCDA
+```
+
+Campos extraidos:
+
+```text
+numero do processo
+status
+classe
+assunto
+foro
+vara
+juiz
+distribuicao
+controle
+area
+partes em texto publico
+movimentacoes em texto publico
+partes estruturadas quando o HTML permite
+movimentacoes estruturadas quando o HTML permite
+papel/nome da parte em resultados de lista
+data de recebimento em resultados de lista
+URL publica final
+```
+
+### Uso
+
+```bash
+nanojuris documento "0003938-14.2017.8.26.0323" --fonte tjsp_esaj_cpopg
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --numero "0003938-14.2017.8.26.0323"
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --parte "ANDERSON DE AZEVEDO GONCALVES" --limite 4
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --oab "123456" --limite 2
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --parte "ANDERSON DE AZEVEDO GONCALVES" --detalhar --limite 1
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+page = client.search(
+  "",
+  source="tjsp_esaj_cpopg",
+  party_name="ANDERSON DE AZEVEDO GONCALVES",
+  page_size=4,
+)
+page_with_detail = client.search(
+  "",
+  source="tjsp_esaj_cpopg",
+  party_name="ANDERSON DE AZEVEDO GONCALVES",
+  fetch_details=True,
+  page_size=1,
+)
+document = client.get_document(
+  "0003938-14.2017.8.26.0323",
+  source="tjsp_esaj_cpopg",
+)
+```
+
+### Controle de acesso
+
+O provider usa apenas sessao HTTP limpa. Autos, anexos, segredo de justica,
+login, captcha e validacoes adicionais sao tratados como limite da fonte, sem
+bypass.
+
+Buscas por lista podem acionar mensagem de multiplas consultas simultaneas ou
+controle de acesso. Nesses casos o provider falha de forma explicita, sem tentar
+reaproveitar cookies, resolver captcha ou simular sessao de navegador.
 
 O teste live aceita dois comportamentos corretos:
 

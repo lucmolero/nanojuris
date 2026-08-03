@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any
 
 
@@ -11,6 +12,56 @@ def utc_now_iso() -> str:
     """Return a stable UTC timestamp for source traces."""
 
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+class AccessStatus(str, Enum):
+    """Normalized public-source access status."""
+
+    PUBLIC = "public"
+    PARTIAL = "partial"
+    ACCESS_CONTROL_REQUIRED = "access_control_required"
+    LOGIN_REQUIRED = "login_required"
+    SECRET_OR_RESTRICTED = "secret_or_restricted"
+    NOT_FOUND = "not_found"
+    SOURCE_UNAVAILABLE = "source_unavailable"
+
+
+class ExtractionStatus(str, Enum):
+    """Normalized extraction outcome status."""
+
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    EMPTY = "empty"
+    PARSER_CONTRACT_CHANGED = "parser_contract_changed"
+    UNSUPPORTED_FORMAT = "unsupported_format"
+    FAILED = "failed"
+
+
+@dataclass(slots=True)
+class ProviderCapabilities:
+    """Declared extraction capabilities and limits for a public source."""
+
+    source: str
+    display_name: str
+    source_url: str
+    category: str
+    search_modes: list[str] = field(default_factory=list)
+    document_types: list[str] = field(default_factory=list)
+    content_formats: list[str] = field(default_factory=list)
+    canonical_records: list[str] = field(default_factory=list)
+    extracted_fields: list[str] = field(default_factory=list)
+    access_statuses: list[AccessStatus] = field(default_factory=list)
+    endpoints: list[str] = field(default_factory=list)
+    supports_full_text: bool = False
+    supports_catalog: bool = False
+    supports_suggestions: bool = False
+    supports_live_tests: bool = False
+    supports_mcp: bool = True
+    limitations: list[str] = field(default_factory=list)
+    responsible_use: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(slots=True)
@@ -23,6 +74,98 @@ class SourceTrace:
     query: dict[str, Any] = field(default_factory=dict)
     source_url: str | None = None
     limitations: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class ExtractionTrace:
+    """Technical trace of a parser/extractor run."""
+
+    parser: str
+    parser_version: str
+    status: ExtractionStatus = ExtractionStatus.COMPLETE
+    access_status: AccessStatus = AccessStatus.PUBLIC
+    extracted_at: str = field(default_factory=utc_now_iso)
+    content_sha256: str | None = None
+    content_bytes: int | None = None
+    warnings: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CanonicalDocument:
+    """A public document extracted from a jurisprudence source."""
+
+    id: str
+    source: str
+    document_type: str
+    content_type: str | None = None
+    title: str | None = None
+    text: str | None = None
+    url: str | None = None
+    sha256: str | None = None
+    byte_size: int | None = None
+    retrieved_at: str | None = None
+    access_status: AccessStatus = AccessStatus.PUBLIC
+    source_trace: SourceTrace | None = None
+    extraction_trace: ExtractionTrace | None = None
+    raw_metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CanonicalDecision:
+    """A normalized decision extracted from a jurisprudence source."""
+
+    id: str
+    source: str
+    court: str
+    case_number: str | None = None
+    registry_number: str | None = None
+    decision_type: str | None = None
+    case_class: str | None = None
+    subject: str | None = None
+    rapporteur: str | None = None
+    judging_body: str | None = None
+    origin_county: str | None = None
+    judgment_date: str | None = None
+    publication_date: str | None = None
+    summary: str | None = None
+    full_text: str | None = None
+    document_url: str | None = None
+    source_trace: SourceTrace | None = None
+    extraction_trace: ExtractionTrace | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CanonicalPrecedent:
+    """A normalized qualified precedent extracted from a public source."""
+
+    id: str
+    source: str
+    court: str
+    precedent_type: str
+    number: str | int | None = None
+    status: str | None = None
+    question: str | None = None
+    thesis: str | None = None
+    affected_cases: list[ParadigmCase] = field(default_factory=list)
+    paradigm_cases: list[ParadigmCase] = field(default_factory=list)
+    updated_at: str | None = None
+    source_trace: SourceTrace | None = None
+    extraction_trace: ExtractionTrace | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -51,9 +194,19 @@ class JurisprudenceQuery:
     exact_phrase: str = ""
     updated_from: str = ""
     updated_to: str = ""
+    published_from: str = ""
+    published_to: str = ""
     include_cancelled: bool = False
     order_by: str = "Text"
     number: str = ""
+    party_name: str = ""
+    party_document: str = ""
+    lawyer_name: str = ""
+    oab: str = ""
+    precatory_number: str = ""
+    police_document: str = ""
+    cda: str = ""
+    fetch_details: bool = False
     courts: list[str] = field(default_factory=list)
     types: list[str] = field(default_factory=list)
     page: int = 1

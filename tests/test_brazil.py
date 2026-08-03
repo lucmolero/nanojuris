@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import pytest
+
+from nanojuris import COURTS, get_court, list_courts, normalize_court_code
+
+
+def test_court_catalog_contains_brazilian_judiciary_core():
+    codes = {court.code for court in COURTS}
+
+    assert "STF" in codes
+    assert "STJ" in codes
+    assert "TJSP" in codes
+    assert "TRF6" in codes
+    assert "TRT24" in codes
+
+
+def test_get_court_normalizes_acronyms():
+    court = get_court(" tj-sp ")
+
+    assert court.code == "TJSP"
+    assert court.state == "SP"
+    assert court.official_url == "https://www.tjsp.jus.br/"
+    assert court.source_system == "esaj_cjsg"
+    assert court.provider_status == "implemented"
+    assert court.providers == ("tjsp_cjsg", "tjsp_eproc_jurisprudencia", "tjsp_esaj_cpopg")
+    assert normalize_court_code(" trf-1 ") == "TRF1"
+
+
+def test_list_courts_filters_by_branch_state_and_status():
+    state_courts = list_courts(branch="state")
+    sao_paulo_courts = list_courts(state="sp")
+    esaj_cjsg_courts = list_courts(source_system="esaj_cjsg")
+    implemented = list_courts(implemented=True)
+
+    assert len(state_courts) == 27
+    assert [court.code for court in sao_paulo_courts] == ["TJSP"]
+    assert [court.code for court in esaj_cjsg_courts] == [
+        "TJAC",
+        "TJAL",
+        "TJAM",
+        "TJMS",
+        "TJSP",
+    ]
+    assert [court.code for court in implemented] == [
+        "STM",
+        "TJAC",
+        "TJAL",
+        "TJAM",
+        "TJDFT",
+        "TJMS",
+        "TJSP",
+        "TRF4",
+    ]
+
+
+def test_core_courts_include_official_urls_and_source_systems():
+    stj = get_court("STJ")
+    cnj = get_court("CNJ")
+
+    assert stj.official_url == "https://www.stj.jus.br/sites/portalp/Inicio"
+    assert stj.source_system == "portal_proprio"
+    assert cnj.official_url == "https://www.cnj.jus.br/sistemas/datajud/"
+    assert cnj.source_system == "datajud"
+
+
+def test_get_court_rejects_unknown_code():
+    with pytest.raises(KeyError, match="Unknown Brazilian court code"):
+        get_court("XYZ")

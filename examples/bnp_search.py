@@ -1,6 +1,5 @@
 from nanojuris import NanoJurisClient
 
-
 client = NanoJurisClient()
 page = client.search(
     "ICMS consumidor final",

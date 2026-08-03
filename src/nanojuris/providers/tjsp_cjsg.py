@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import time
+from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urljoin
 
@@ -18,13 +20,51 @@ from nanojuris.errors import (
     SourceUnavailableError,
 )
 from nanojuris.models import (
+    AccessStatus,
+    CanonicalDocument,
     DecisionBundle,
+    ExtractionTrace,
     JurisprudenceQuery,
     JurisprudenceResult,
+    ProviderCapabilities,
     SearchPage,
     SourceTrace,
 )
 from nanojuris.providers.base import JurisprudenceProvider
+
+
+@dataclass(slots=True, frozen=True)
+class CjsgAccessDiagnostic:
+    """Access and response-shape signals observed in TJSP/CJSG HTML."""
+
+    has_result_container: bool
+    has_download_links: bool
+    has_search_form: bool
+    has_recaptcha_field: bool
+    has_uuid_captcha_field: bool
+    has_recaptcha_widget: bool
+    has_access_control_route: bool
+    has_login_script: bool
+
+    @property
+    def access_control_required(self) -> bool:
+        return not self.has_result_container and (
+            self.has_recaptcha_field
+            or self.has_uuid_captcha_field
+            or self.has_recaptcha_widget
+            or self.has_access_control_route
+        )
+
+    @property
+    def returned_to_search_form(self) -> bool:
+        return self.has_search_form and not self.has_result_container
+
+    def to_dict(self) -> dict[str, bool]:
+        return asdict(self)
+
+    def summary(self) -> str:
+        flags = [name for name, value in self.to_dict().items() if value]
+        return ", ".join(flags) if flags else "no known TJSP/CJSG access signals"
 
 
 class TjspCjsgProvider(JurisprudenceProvider):
@@ -85,6 +125,88 @@ class TjspCjsgProvider(JurisprudenceProvider):
             texts=[{"content": content, "content_type": "text/html"}],
             source_trace=trace,
             raw={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
+        )
+
+    def get_document(self, document_id: str) -> CanonicalDocument:
+        cd_acordao, cd_foro = self._parse_precedent_id(document_id)
+        bundle = self.get_decisions(document_id)
+        content = str(bundle.texts[0].get("content") if bundle.texts else "")
+        content_type = str(bundle.texts[0].get("content_type") if bundle.texts else "text/html")
+        content_bytes = content.encode("utf-8")
+        return CanonicalDocument(
+            id=document_id,
+            source=self.name,
+            document_type="acordao",
+            content_type=content_type,
+            title=f"TJSP/CJSG inteiro teor {document_id}",
+            text=content,
+            url=bundle.source_trace.source_url if bundle.source_trace else None,
+            sha256=hashlib.sha256(content_bytes).hexdigest(),
+            byte_size=len(content_bytes),
+            retrieved_at=bundle.source_trace.retrieved_at if bundle.source_trace else None,
+            access_status=AccessStatus.PUBLIC,
+            source_trace=bundle.source_trace,
+            extraction_trace=ExtractionTrace(
+                parser="tjsp_cjsg.get_document",
+                parser_version="1",
+                content_sha256=hashlib.sha256(content_bytes).hexdigest(),
+                content_bytes=len(content_bytes),
+                metadata={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
+            ),
+            raw_metadata={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
+        )
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(
+            source=self.name,
+            display_name="TJSP Consulta de Jurisprudencia/CJSG",
+            source_url=self.config.tjsp_cjsg_url,
+            category="court_jurisprudence",
+            search_modes=["full_text", "summary", "case_number", "date_range", "decision_type"],
+            document_types=["acordao", "monocratic_decision", "homologation"],
+            content_formats=["html"],
+            canonical_records=["CanonicalDecision", "CanonicalDocument"],
+            extracted_fields=[
+                "case_number",
+                "decision_type",
+                "case_class",
+                "subject",
+                "rapporteur",
+                "origin_county",
+                "judging_body",
+                "publication_date",
+                "summary",
+                "document_url",
+                "cd_acordao",
+                "cd_foro",
+                "access_diagnostic_flags",
+            ],
+            access_statuses=[
+                AccessStatus.PUBLIC,
+                AccessStatus.PARTIAL,
+                AccessStatus.ACCESS_CONTROL_REQUIRED,
+                AccessStatus.SOURCE_UNAVAILABLE,
+            ],
+            endpoints=[
+                "POST /resultadoCompleta.do",
+                "GET /getArquivo.do?cdAcordao=<id>&cdForo=<foro>",
+            ],
+            supports_full_text=True,
+            supports_catalog=False,
+            supports_suggestions=False,
+            supports_live_tests=True,
+            limitations=[
+                "A fonte pode exigir captcha ou outro controle de acesso.",
+                "Inteiro teor depende de cdAcordao/cdForo publico e da resposta da fonte.",
+                (
+                    "O provider diagnostica sinais de formulario, reCAPTCHA, "
+                    "uuidCaptcha e login sem bypass."
+                ),
+            ],
+            responsible_use=[
+                "Nao tentar contornar captcha, login ou controles de acesso.",
+                "Usar testes live apenas quando explicitamente habilitados.",
+            ],
         )
 
     def _build_payload(self, query: JurisprudenceQuery) -> dict[str, str | list[str]]:
@@ -157,9 +279,11 @@ class TjspCjsgProvider(JurisprudenceProvider):
             )
         response.encoding = response.encoding or "utf-8"
         text = response.text
-        if _looks_like_access_control(text):
+        diagnostic = diagnose_cjsg_access(text)
+        if diagnostic.access_control_required:
             raise AccessControlRequiredError(
-                "TJSP/CJSG requires captcha or another access-control step"
+                "TJSP/CJSG requires captcha or another access-control step "
+                f"({diagnostic.summary()})"
             )
         return text
 
@@ -216,18 +340,22 @@ def parse_cjsg_results(
     query: JurisprudenceQuery,
     trace: SourceTrace,
     base_url: str,
+    source: str = "tjsp_cjsg",
+    court: str = "TJSP",
+    id_prefix: str = "tjsp-cjsg",
+    source_label: str = "TJSP/CJSG",
 ) -> SearchPage:
     """Parse a CJSG result page into normalized results."""
 
     if _looks_like_access_control(html):
-        raise AccessControlRequiredError("TJSP/CJSG returned captcha/access-control HTML")
+        raise AccessControlRequiredError(f"{source_label} returned captcha/access-control HTML")
 
     soup = BeautifulSoup(html, "html.parser")
     result_root = soup.select_one("#divDadosResultado-A") or soup.select_one("#tdResultados")
     if result_root is None:
         if "Resultado consulta" in html or "Resultados" in html:
             return SearchPage(
-                source="tjsp_cjsg",
+                source=source,
                 total=0,
                 start=0,
                 end=0,
@@ -236,7 +364,7 @@ def parse_cjsg_results(
                 results=[],
                 source_trace=trace,
             )
-        raise ParserContractChangedError("TJSP/CJSG result container not found")
+        raise ParserContractChangedError(f"{source_label} result container not found")
 
     total, start, end = _parse_pagination(soup.get_text(" ", strip=True))
     results: list[JurisprudenceResult] = []
@@ -270,9 +398,9 @@ def parse_cjsg_results(
             limitations=trace.limitations,
         )
         result = JurisprudenceResult(
-            id=f"tjsp-cjsg-{cd_acordao}-{cd_foro}",
-            source="tjsp_cjsg",
-            court="TJSP",
+            id=f"{id_prefix}-{cd_acordao}-{cd_foro}",
+            source=source,
+            court=court,
             type="acordao",
             number=case_number,
             summary=summary,
@@ -294,16 +422,17 @@ def parse_cjsg_results(
         results.append(result)
 
     if not results and total > 0:
-        raise ParserContractChangedError("TJSP/CJSG parser found total results but no items")
+        raise ParserContractChangedError(f"{source_label} parser found total results but no items")
+    limited_results = results[: query.page_size]
 
     return SearchPage(
-        source="tjsp_cjsg",
+        source=source,
         total=total or len(results),
         start=start or (1 if results else 0),
-        end=end or len(results),
+        end=(start or 1) + len(limited_results) - 1 if limited_results else 0,
         page=query.page,
         page_size=query.page_size,
-        results=results,
+        results=limited_results,
         source_trace=trace,
     )
 
@@ -360,11 +489,20 @@ def _normalize_label(label: str) -> str:
 
 
 def _looks_like_access_control(html: str) -> bool:
+    return diagnose_cjsg_access(html).access_control_required
+
+
+def diagnose_cjsg_access(html: str) -> CjsgAccessDiagnostic:
+    """Classify public TJSP/CJSG response signals without solving access controls."""
+
     lowered = html.lower()
-    if "divdadosresultado" in lowered or "tdresultados" in lowered:
-        return False
-    if "g-recaptcha" in lowered or "recaptcha_response_token" in lowered:
-        return True
-    if "captcha" in lowered and "resultado consulta" not in lowered:
-        return True
-    return False
+    return CjsgAccessDiagnostic(
+        has_result_container="divdadosresultado" in lowered or "tdresultados" in lowered,
+        has_download_links="downloadementa" in lowered,
+        has_search_form="consultacompletaform" in lowered or "consultasimplesform" in lowered,
+        has_recaptcha_field="recaptcha_response_token" in lowered,
+        has_uuid_captcha_field="uuidcaptcha" in lowered,
+        has_recaptcha_widget="g-recaptcha" in lowered,
+        has_access_control_route="captchacontroleacesso" in lowered,
+        has_login_script="verificarlogin" in lowered or "sajcas" in lowered,
+    )

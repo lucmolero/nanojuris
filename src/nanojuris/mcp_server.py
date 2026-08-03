@@ -1,0 +1,232 @@
+"""Optional MCP server entrypoint for NanoJuris."""
+
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
+from nanojuris.mcp_tools import (
+    export_results_tool,
+    get_document_tool,
+    list_courts_tool,
+    list_sources_tool,
+    search_jurisprudence_tool,
+    source_diagnostics_tool,
+    store_export_run_tool,
+    store_get_tool,
+    store_query_tool,
+    store_run_records_tool,
+    store_run_tool,
+    store_runs_tool,
+    store_stats_tool,
+)
+
+
+def create_server() -> Any:
+    """Create a FastMCP server when the optional MCP dependency is installed."""
+
+    try:
+        fastmcp_module = import_module("mcp.server.fastmcp")
+    except ImportError as exc:  # pragma: no cover - depends on optional extra
+        raise RuntimeError("Install NanoJuris with the MCP extra: nanojuris[mcp]") from exc
+
+    fastmcp = fastmcp_module.FastMCP
+    server = fastmcp("nanojuris")
+
+    @server.tool()
+    def list_sources() -> dict[str, Any]:
+        """List declared NanoJuris sources and extraction capabilities."""
+
+        return list_sources_tool()
+
+    @server.tool()
+    def list_courts(
+        branch: str | None = None,
+        state: str = "",
+        source_system: str | None = None,
+        implemented: bool | None = None,
+    ) -> dict[str, Any]:
+        """List Brazilian judiciary bodies known by NanoJuris."""
+
+        allowed = {
+            None,
+            "constitutional",
+            "superior",
+            "federal",
+            "state",
+            "labor",
+            "electoral",
+            "military",
+            "national_council",
+        }
+        if branch not in allowed:
+            raise ValueError("branch must be a known Brazilian judiciary branch")
+        return list_courts_tool(
+            branch=branch,
+            state=state,
+            source_system=source_system,
+            implemented=implemented,
+        )
+
+    @server.tool()
+    def source_diagnostics(source: str = "bnp_pangea") -> dict[str, Any]:
+        """Return source capabilities, limits and responsible-use notes."""
+
+        return source_diagnostics_tool(source)
+
+    @server.tool()
+    def search_jurisprudence(
+        text: str = "",
+        source: str = "bnp_pangea",
+        courts: list[str] | None = None,
+        types: list[str] | None = None,
+        number: str = "",
+        page: int = 1,
+        page_size: int = 10,
+        canonical: bool = True,
+    ) -> dict[str, Any]:
+        """Search public jurisprudence and return normalized/canonical data."""
+
+        return search_jurisprudence_tool(
+            text,
+            source=source,
+            courts=courts,
+            types=types,
+            number=number,
+            page=page,
+            page_size=page_size,
+            canonical=canonical,
+        )
+
+    @server.tool()
+    def export_results(
+        text: str = "",
+        source: str = "bnp_pangea",
+        output_format: str = "canonical-jsonl",
+        courts: list[str] | None = None,
+        types: list[str] | None = None,
+        number: str = "",
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict[str, Any]:
+        """Search and export public jurisprudence results."""
+
+        return export_results_tool(
+            text,
+            source=source,
+            output_format=output_format,
+            courts=courts,
+            types=types,
+            number=number,
+            page=page,
+            page_size=page_size,
+        )
+
+    @server.tool()
+    def get_document(document_id: str, source: str = "tjsp_cjsg") -> dict[str, Any]:
+        """Return one public full-text document as canonical extraction data."""
+
+        return get_document_tool(document_id, source=source)
+
+    @server.tool()
+    def store_stats(db_path: str) -> dict[str, Any]:
+        """Return aggregate statistics from a local NanoJuris SQLite store."""
+
+        return store_stats_tool(db_path)
+
+    @server.tool()
+    def store_query(
+        db_path: str,
+        kind: str | None = None,
+        source: str = "",
+        court: str = "",
+        case_number: str = "",
+        subject: str = "",
+        rapporteur: str = "",
+        decision_type: str = "",
+        precedent_type: str = "",
+        canonical_key: str = "",
+        publication_date_from: str = "",
+        publication_date_to: str = "",
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Query records from a local NanoJuris SQLite store."""
+
+        if kind not in {None, "decision", "document", "precedent"}:
+            raise ValueError("kind must be decision, document or precedent")
+        return store_query_tool(
+            db_path,
+            kind=kind,
+            source=source,
+            court=court,
+            case_number=case_number,
+            subject=subject,
+            rapporteur=rapporteur,
+            decision_type=decision_type,
+            precedent_type=precedent_type,
+            canonical_key=canonical_key,
+            publication_date_from=publication_date_from,
+            publication_date_to=publication_date_to,
+            limit=limit,
+        )
+
+    @server.tool()
+    def store_get(db_path: str, kind: str, record_id: str) -> dict[str, Any]:
+        """Return one canonical record from a local NanoJuris SQLite store."""
+
+        if kind not in {"decision", "document", "precedent"}:
+            raise ValueError("kind must be decision, document or precedent")
+        return store_get_tool(db_path, kind, record_id)
+
+    @server.tool()
+    def store_runs(db_path: str, limit: int = 50) -> dict[str, Any]:
+        """List saved research runs from a local NanoJuris SQLite store."""
+
+        return store_runs_tool(db_path, limit=limit)
+
+    @server.tool()
+    def store_run(db_path: str, run_id: str) -> dict[str, Any]:
+        """Return one saved research run from a local NanoJuris SQLite store."""
+
+        return store_run_tool(db_path, run_id)
+
+    @server.tool()
+    def store_run_records(
+        db_path: str,
+        run_id: str,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Return records linked to a saved research run."""
+
+        return store_run_records_tool(db_path, run_id, limit=limit, offset=offset)
+
+    @server.tool()
+    def store_export_run(
+        db_path: str,
+        run_id: str,
+        output_format: str = "jsonl",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Export records linked to a saved research run."""
+
+        return store_export_run_tool(
+            db_path,
+            run_id,
+            output_format=output_format,
+            limit=limit,
+            offset=offset,
+        )
+
+    return server
+
+
+def main() -> None:
+    """Run the optional MCP server."""
+
+    create_server().run()
+
+
+if __name__ == "__main__":
+    main()

@@ -14,10 +14,12 @@ from nanojuris.errors import (
     SourceUnavailableError,
 )
 from nanojuris.models import (
+    AccessStatus,
     DecisionBundle,
     JurisprudenceQuery,
     JurisprudenceResult,
     ParadigmCase,
+    ProviderCapabilities,
     ProviderCatalog,
     ProviderOption,
     SearchPage,
@@ -66,6 +68,48 @@ class BnpPangeaProvider(JurisprudenceProvider):
             species_groups=list(data.get("gruposEspecies") or []),
             source_trace=trace,
             raw=data,
+        )
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(
+            source=self.name,
+            display_name="Banco Nacional de Precedentes/Pangea",
+            source_url=self.config.bnp_api_url,
+            category="qualified_precedents",
+            search_modes=["text", "court", "species", "number", "date_range"],
+            document_types=["precedent", "linked_decision_metadata"],
+            content_formats=["json"],
+            canonical_records=["CanonicalPrecedent"],
+            extracted_fields=[
+                "court",
+                "precedent_type",
+                "number",
+                "question",
+                "thesis",
+                "status",
+                "updated_at",
+                "paradigm_cases",
+                "aggregations",
+            ],
+            access_statuses=[AccessStatus.PUBLIC, AccessStatus.SOURCE_UNAVAILABLE],
+            endpoints=[
+                "GET /parametros",
+                "GET /sugestoes",
+                "POST /precedentes",
+                "GET /precedentes/{id}/decisoes",
+            ],
+            supports_full_text=True,
+            supports_catalog=True,
+            supports_suggestions=True,
+            supports_live_tests=True,
+            limitations=[
+                "Disponibilidade depende da API publica usada pelo frontend Pangea/BNP.",
+                "Nem todo precedente possui textos de decisoes no endpoint publico.",
+            ],
+            responsible_use=[
+                "Aplicar timeout e rate limit em consultas em lote.",
+                "Preservar SourceTrace e payload de consulta para auditoria.",
+            ],
         )
 
     def list_courts(self, *, include_disabled: bool = False) -> list[ProviderOption]:
@@ -228,7 +272,12 @@ class BnpPangeaProvider(JurisprudenceProvider):
         if response.status_code >= 500:
             raise SourceUnavailableError(f"BNP returned HTTP {response.status_code}")
         if response.status_code >= 400:
-            raise SourceUnavailableError(f"BNP rejected request with HTTP {response.status_code}")
+            detail = _short_response_text(response)
+            payload = kwargs.get("json") or kwargs.get("params") or {}
+            raise SourceUnavailableError(
+                f"BNP rejected request with HTTP {response.status_code}"
+                f"; response={detail!r}; payload={payload!r}"
+            )
 
         try:
             return response.json()
@@ -288,3 +337,8 @@ class BnpPangeaProvider(JurisprudenceProvider):
                 raise ParserContractChangedError(f"BNP parameters response missing {key!r}")
             if not isinstance(data.get(key), list):
                 raise ParserContractChangedError(f"BNP parameters {key!r} is not a list")
+
+
+def _short_response_text(response: requests.Response) -> str:
+    text = getattr(response, "text", "") or ""
+    return " ".join(text.split())[:300]

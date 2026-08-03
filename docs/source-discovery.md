@@ -1,0 +1,255 @@
+# Source Discovery Workflow
+
+Este fluxo existe para descobrir rotas publicas validas com baixo custo antes de
+alterar o core do projeto. A regra operacional e: primeiro reproduzir a entrada
+com uma sessao HTTP limpa, depois criar fixture, so entao implementar provider.
+
+Projetos abertos de scraping podem ser usados como mapa de endpoints, payloads e
+seletores, desde que a NanoJuris valide tudo novamente com sessao limpa e nao
+copie fluxos de captcha, login, cookie ou browser stealth. A ficha
+[github-scraper-research.md](github-scraper-research.md) registra essa frente.
+
+## Sequencia recomendada
+
+1. Registrar a entrada feita no navegador: URL inicial, numero/termo pesquisado,
+   tribunal, sistema e resultado esperado.
+2. Testar a mesma rota com `examples/source_route_probe.py`, sem cookies,
+   cabecalhos privados, HAR, token, captcha solving ou sessao exportada.
+3. Confirmar os sinais objetivos:
+   - HTTP 200 ou redirect oficial esperado;
+   - `final_url` coerente com a fonte;
+   - texto esperado presente no HTML;
+   - ausencia de bloqueio como pagina exclusiva de captcha, Cloudflare,
+     Turnstile, login obrigatorio ou erro de sessao;
+   - campos juridicos objetivos visiveis no HTML publico.
+4. Salvar uma fixture sanitizada com um exemplo publico minimo.
+5. Implementar parser offline contra a fixture.
+6. Implementar fetch responsavel no provider.
+7. Adicionar diagnostics, capabilities e teste live opcional desligado por
+   padrao.
+
+## Criterios para promover uma rota
+
+Uma rota pode virar provider quando a equipe consegue reproduzir a consulta com
+`requests` limpo e identificar pelo menos um campo juridico objetivo no corpo da
+resposta, como numero do processo, classe, assunto, relator, comarca, orgao
+julgador, ementa, tese, movimentacao ou URL publica de documento.
+
+Se a rota exigir captcha, login, token voluvel, Cloudflare/Turnstile ou estado
+de navegador, ela deve ser registrada como descoberta bloqueada. O projeto pode
+ter parser de HTML salvo legitimamente, mas nao deve automatizar bypass.
+
+## Exemplo
+
+```bash
+python examples/source_route_probe.py \
+  "https://esaj.tjsp.jus.br/cpopg/search.do?cbPesquisa=NUMPROC&numeroDigitoAnoUnificado=0003938-14.2017&foroNumeroUnificado=0323&dadosConsulta.valorConsultaNuUnificado=0003938-14.2017.8.26.0323&dadosConsulta.valorConsulta=0003938-14.2017.8.26.0323&dadosConsulta.tipoNuProcesso=UNIFICADO" \
+  --expect "0003938-14.2017.8.26.0323" \
+  --expect "Ação Penal"
+```
+
+Saida esperada: JSON com status, URL final, tamanho, hash, titulo, sinais de
+acesso, `route_status` e presenca dos textos esperados. Se o texto esperado
+aparecer apenas em formulario ou pagina com captcha/login/recaptcha, o probe deve
+retornar `ok: false` e `route_status: access_control_or_login`.
+
+## Registro de descoberta: 2026-08-02
+
+### Promovido: Comunica PJe/DJEN
+
+Rota publica:
+
+```text
+https://comunicaapi.pje.jus.br/api/v1/comunicacao
+```
+
+Probes limpos:
+
+```text
+texto=infanticidio&pagina=0&size=5 -> HTTP 200, JSON, count=1260
+texto=infanticidio&siglaTribunal=TJSP -> HTTP 200, count=131
+texto=infanticidio&siglaTribunal=STJ -> HTTP 200, count=53
+numeroProcesso=15007802620258260603 -> HTTP 200, count=3
+texto=infanticidio&dataDisponibilizacaoInicio=2026-07-31&dataDisponibilizacaoFim=2026-07-31 -> HTTP 200, count=1
+```
+
+Campos observados: `id`, `data_disponibilizacao`, `siglaTribunal`,
+`tipoComunicacao`, `nomeOrgao`, `texto`, `numero_processo`, `link`,
+`tipoDocumento`, `nomeClasse`, `numeroprocessocommascara`, `destinatarios` e
+`destinatarioadvogados`.
+
+Classificacao: provider `comunica_pje`, categoria `judicial_communications`.
+Nao e fonte de acordaos; e fonte publica de comunicacoes/publicacoes.
+
+Parametros testados e nao promovidos: `data_inicio` e `data_fim` nao filtraram a
+resposta observada; `/api/v1/comunicacao/tipos` retornou HTTP 422; e
+`/api/v1/tribunais` retornou HTTP 404.
+
+Analise consolidada de expansao dos providers existentes:
+[provider-expansion-analysis-2026-08-02.md](provider-expansion-analysis-2026-08-02.md).
+
+### Promovido: TJAC/CJSG
+
+Probe limpo em 2026-08-03:
+
+```text
+POST https://esaj.tjac.jus.br/cjsg/resultadoCompleta.do
+dados.buscaInteiroTeor=infanticidio
+```
+
+Resultado observado: HTTP 200, HTML com `downloadEmenta`, `divDadosResultado-A`
+e `tdResultados`, sem sinais de captcha no fluxo testado. O parser CJSG
+normalizou 2 itens da primeira pagina de 5 resultados, incluindo
+`tjac-cjsg-2471822-0` e link publico `getArquivo.do?cdAcordao=2471822&cdForo=0`.
+
+Decisao: promover como provider `tjac_cjsg`, categoria
+`court_jurisprudence`, reaproveitando o parser CJSG comum.
+
+### Promovido: TJAL/CJSG
+
+Probe limpo em 2026-08-03:
+
+```text
+POST https://www2.tjal.jus.br/cjsg/resultadoCompleta.do
+dados.buscaInteiroTeor=infanticidio
+```
+
+Resultado observado: HTTP 200, HTML com `downloadEmenta`, `divDadosResultado-A`
+e `tdResultados`, sem sinais de captcha no fluxo testado. O parser CJSG
+normalizou 2 itens da primeira pagina de 12 resultados, incluindo
+`tjal-cjsg-716164-0` e link publico `getArquivo.do?cdAcordao=716164&cdForo=0`.
+
+Decisao: promover como provider `tjal_cjsg`, categoria
+`court_jurisprudence`, reaproveitando o parser CJSG comum.
+
+### Promovido: TJAM/CJSG
+
+Probe limpo em 2026-08-03:
+
+```text
+POST https://consultasaj.tjam.jus.br/cjsg/resultadoCompleta.do
+dados.buscaInteiroTeor=infanticidio
+```
+
+Resultado observado: HTTP 200, HTML com `downloadEmenta`, `divDadosResultado-A`
+e `tdResultados`, sem sinais de captcha no fluxo testado. O parser CJSG
+normalizou 2 itens da primeira pagina de 12 resultados, incluindo
+`tjam-cjsg-3287961-0` e link publico `getArquivo.do?cdAcordao=3287961&cdForo=0`.
+
+Decisao: promover como provider `tjam_cjsg`, categoria
+`court_jurisprudence`, reaproveitando o parser CJSG comum.
+
+### Promovido: TJMS/CJSG
+
+Rota publica validada a partir de pesquisa em projetos abertos:
+
+```text
+https://esaj.tjms.jus.br/cjsg/resultadoCompleta.do
+```
+
+Probe limpo:
+
+```text
+dados.buscaInteiroTeor=infanticidio -> HTTP 200, HTML CJSG, 22 resultados
+```
+
+O parser CJSG existente leu classe, assunto, comarca, relator, orgao julgador,
+datas, ementa e `getArquivo.do?cdAcordao=<id>&cdForo=0`. Classificacao:
+provider `tjms_cjsg`, categoria `court_jurisprudence`.
+
+### Promovido: STM/JMU Jurisprudencia
+
+Probe limpo em 2026-08-03:
+
+```text
+GET https://jurisprudencia.stm.jus.br/consulta.php?search_filter_option=jurisprudencia&search_filter=busca_avancada&q=&fqx_ementa=deser%C3%A7%C3%A3o
+```
+
+Resultado observado: HTTP 200, HTML publico sem sinais de captcha ou reCAPTCHA,
+com `25` paineis de resultado na primeira pagina. Cada painel contem numero CNJ,
+classe, relator, assunto, datas, ementa em `blockquote`, UUID e botao
+`Inteiro Teor` apontando para
+`https://eproc2g.stm.jus.br/eproc_2g_prod/externo_controlador.php?acao=visualizar_acordao&uuid=<uuid>`.
+
+Decisao: promover como provider `stm_jurisprudencia`, categoria
+`court_jurisprudence`, com `get_document` para o HTML publico de inteiro teor.
+
+### Promovido: TRF4/eproc Jurisprudencia
+
+Probe limpo em 2026-08-03:
+
+```text
+GET  https://jurisprudencia.trf4.jus.br/
+POST https://jurisprudencia.trf4.jus.br/eproc2trf4/externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados
+txtPesquisa=deserção&rdoCampo=I
+```
+
+Resultado observado: HTTP 200, HTML publico sem sinais de captcha ou reCAPTCHA,
+com `10` cards `.resultadoItem` na primeira pagina e indicacao textual de
+`Documento 1 de 21090`. Os cards trazem numero CNJ, classe, UF, orgao julgador,
+datas, relator, resumo da decisao, link de acompanhamento processual e
+`data-link` para `download_inteiro_teor&id_jurisprudencia=<id>`.
+
+Probe de inteiro teor:
+
+```text
+GET https://jurisprudencia.trf4.jus.br/eproc2trf4/externo_controlador.php?acao=jurisprudencia@jurisprudencia/download_inteiro_teor&id_jurisprudencia=41785517964304066196063791796
+```
+
+Resultado observado: HTTP 200, HTML publico, sem captcha/login, contendo
+`5037898-36.2025.4.04.0000`, `deserção` e texto de decisao.
+
+Decisao: promover como provider `trf4_eproc_jurisprudencia`, categoria
+`court_jurisprudence`, reaproveitando parser eproc parametrizado e declarando
+`get_document` para inteiro teor publico.
+
+### Expandido: TJSP/e-SAJ CPOPg
+
+Rotas publicas validas:
+
+```text
+https://esaj.tjsp.jus.br/cpopg/search.do
+https://esaj.tjsp.jus.br/cpopg/show.do
+```
+
+Probes limpos:
+
+```text
+cbPesquisa=NUMPROC&dadosConsulta.valorConsultaNuUnificado=0003938-14.2017.8.26.0323 -> detalhe publico
+cbPesquisa=NMPARTE&dadosConsulta.valorConsulta=ANDERSON DE AZEVEDO GONCALVES -> 4 links de processo
+cbPesquisa=NUMOAB&dadosConsulta.valorConsulta=123456 -> lista publica parseavel
+```
+
+Campos observados em lista: numero CNJ, papel da parte, nome, classe, assunto,
+data de recebimento, vara e link `show.do`. Campos observados no detalhe:
+classe, area, assunto, distribuicao, controle, foro, vara, juiz, situacao,
+partes e movimentacoes.
+
+Classificacao: provider `tjsp_esaj_cpopg`, categoria `case_lookup`. Os demais
+modos expostos pelo formulario foram mapeados, mas devem continuar sujeitos a
+smoke limpo antes de qualquer promessa de estabilidade.
+
+### Bloqueado ou pendente
+
+| Fonte | Resultado do probe limpo | Classificacao |
+| --- | --- | --- |
+| TJSP/CJSG GET com termo | HTTP 200, termo ecoado, mas `captcha`, `recaptcha` e `login` presentes | acesso controlado; nao promover por esse GET |
+| STJ/SCON GET | HTTP 403 com verificacao automatica/JavaScript/cookies | acesso controlado sem bypass |
+| DataJud/CNJ API publica | HTTP 401, `missing authentication credentials`, aceita Basic/Bearer/ApiKey | requer credencial/APIKey |
+| STF jurisprudencia SPA | falha local de certificado SSL com `requests`; teste diagnostico sem verify retornou 202 e corpo vazio | inconclusivo; precisa ficha tecnica propria |
+| BNP/Pangea termos criminais | HTTP 400 para `infanticidio`/`homicidio`, embora outros termos funcionem | aprofundar validacao de payload/diagnostico |
+| TJMS/CJSG data de publicacao | `dados.dtPublicacaoInicio/Fim=01/01/1900..31/12/2099` zerou busca que sem data retornou 22 resultados | nao promover sem novo contrato validado |
+| TST jurisprudencia SPA | `https://jurisprudencia.tst.jus.br/config.json` retorna `base_url=https://jurisprudencia-backend2.tst.jus.br`; `POST /rest/pesquisa-textual/1/2` responde JSON quando payload nao filtra, mas campos reais da SPA (`e`, `ou`, `termoExato`, `ementa`) retornaram HTTP 400 com corpo vazio | candidato tecnico; precisa reproduzir payload exato da SPA antes de provider |
+| TSE jurisprudencia SPA | bundle Angular aponta para `https://sjur-pesquisa-api.tse.jus.br/{tribunal}/sjur-pesquisa-backend/rest/public/pesquisa`; `POST /public/pesquisa` com JSON de busca retorna HTTP 200 com `Falha na verificação antirrobô.` e resultados vazios | acesso antirrobo; nao promover sem fluxo publico limpo sem captcha |
+| TNU/CJF | `https://www.cjf.jus.br/jurisprudencia/tnu/` fechou a conexao sem resposta no probe limpo | nao promover sem nova rota publica estavel |
+| TJRJ/eJuris | `https://www3.tjrj.jus.br/ejuris/ConsultarJurisprudencia.aspx` retorna WebForms publico com `__VIEWSTATE`, campos de pesquisa e script `https://www.google.com/recaptcha/api.js?render=...` | diagnostics-first; nao promover sem fluxo limpo sem reCAPTCHA |
+| TJCE/CJSG | conexao resetada pelo host remoto em `https://esaj.tjce.jus.br/cjsg/resultadoCompleta.do` | nao promover sem novo endpoint ou janela estavel |
+| TJSC/CJSG | DNS falhou para `https://esaj.tjsc.jus.br/cjsg/resultadoCompleta.do` | endpoint candidato invalido |
+| TJBA/CJSG | falha de handshake SSL em `https://esaj.tjba.jus.br/cjsg/resultadoCompleta.do` | nao promover sem perfil SSL/endpoint correto |
+| TJRN/CJSG | HTTP 403 Access Denied em `https://esaj.tjrn.jus.br/cjsg/resultadoCompleta.do` | acesso bloqueado no probe limpo |
+| TJAP/TJPE/TJSE/CJSG | HTTP 404 nos endpoints `/cjsg/resultadoCompleta.do` testados | endpoints candidatos invalidos |
+| TJES/CJSG | HTTP 503 em `https://sistemas.tjes.jus.br/cjsg/resultadoCompleta.do` | fonte indisponivel no probe limpo |
+| TJMA/CJSG | HTTP 404 em `https://jurisconsult.tjma.jus.br/cjsg/resultadoCompleta.do` | endpoint candidato invalido |
+| TJRO/CJSG | conexao fechada sem resposta em `https://webapp.tjro.jus.br/cjsg/resultadoCompleta.do` | nao promover sem endpoint estavel |
+| TJMT/TJPA/TJRR/CJSG | HTTP 405 nos endpoints `/cjsg/resultadoCompleta.do` testados | metodo/rota nao confirmado; precisa nova descoberta |
+| TJTO/CJSG | HTTP 403 em `https://jurisprudencia.tjto.jus.br/cjsg/resultadoCompleta.do` | acesso bloqueado no probe limpo |

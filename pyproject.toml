@@ -73,6 +73,7 @@ Issues = "https://github.com/lucmolero/nanojuris/issues"
 
 [project.scripts]
 nanojuris = "nanojuris.cli:main"
+nanojuris-mcp = "nanojuris.mcp_server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

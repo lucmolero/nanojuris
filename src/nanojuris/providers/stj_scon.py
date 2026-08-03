@@ -1,0 +1,296 @@
+"""STJ SCON public jurisprudence provider."""
+
+from __future__ import annotations
+
+import re
+import time
+from typing import Any
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
+
+from nanojuris.config import NanoJurisConfig
+from nanojuris.errors import (
+    AccessControlRequiredError,
+    ParserContractChangedError,
+    RateLimitDetectedError,
+    SourceUnavailableError,
+)
+from nanojuris.models import (
+    AccessStatus,
+    DecisionBundle,
+    JurisprudenceQuery,
+    JurisprudenceResult,
+    ProviderCapabilities,
+    SearchPage,
+    SourceTrace,
+)
+from nanojuris.providers.base import JurisprudenceProvider
+
+
+class StjSconProvider(JurisprudenceProvider):
+    """Provider for public STJ SCON case-law search."""
+
+    name = "stj_scon"
+
+    def __init__(
+        self,
+        config: NanoJurisConfig | None = None,
+        session: requests.Session | None = None,
+    ) -> None:
+        self.config = config or NanoJurisConfig()
+        self.session = session or requests.Session()
+        self._last_request = 0.0
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        endpoint = "/SCON/pesquisar.jsp"
+        payload = self._build_payload(query)
+        html = self._request_text("POST", endpoint, data=payload)
+        trace = SourceTrace(
+            provider=self.name,
+            endpoint=endpoint,
+            query=payload,
+            source_url=urljoin(self.config.stj_scon_url.rstrip("/") + "/", endpoint.lstrip("/")),
+            limitations=[
+                "Fonte HTML publica do STJ/SCON sujeita a mudancas de layout.",
+                "Operadores de busca pertencem ao STJ e sao repassados sem reinterpretacao.",
+                "O provider detecta captcha/controle de acesso e nao implementa bypass.",
+            ],
+        )
+        return parse_stj_scon_results(
+            html,
+            query=query,
+            trace=trace,
+            base_url=self.config.stj_url,
+        )
+
+    def get_decisions(self, precedent_id: str) -> DecisionBundle:
+        return DecisionBundle(
+            precedent_id=precedent_id,
+            source=self.name,
+            texts=[],
+            raw={"message": "stj_scon does not expose linked precedent decisions yet"},
+        )
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(
+            source=self.name,
+            display_name="STJ SCON Acordaos",
+            source_url="https://processo.stj.jus.br/SCON/acordaos/",
+            category="court_jurisprudence",
+            search_modes=["text", "case_number", "stj_query_language"],
+            document_types=["acordao"],
+            content_formats=["html"],
+            canonical_records=["CanonicalDecision"],
+            extracted_fields=[
+                "case_number",
+                "registry_number",
+                "decision_type",
+                "rapporteur",
+                "judging_body",
+                "judgment_date",
+                "publication_date",
+                "summary",
+                "document_url",
+            ],
+            access_statuses=[
+                AccessStatus.PUBLIC,
+                AccessStatus.PARTIAL,
+                AccessStatus.ACCESS_CONTROL_REQUIRED,
+                AccessStatus.SOURCE_UNAVAILABLE,
+            ],
+            endpoints=["POST /SCON/pesquisar.jsp"],
+            supports_full_text=False,
+            supports_catalog=False,
+            supports_suggestions=False,
+            supports_live_tests=True,
+            limitations=[
+                "Primeira versao foca acordaos SCON e fixtures offline.",
+                (
+                    "Inteiro teor sera ampliado em etapa posterior quando "
+                    "a URL publica responder sem controle de acesso."
+                ),
+                "A fonte pode usar parametros HTML/sessao volateis.",
+            ],
+            responsible_use=[
+                "Nao tentar contornar captcha, login ou controles de acesso.",
+                "Usar testes live apenas quando explicitamente habilitados.",
+                (
+                    "Preservar operadores oficiais do STJ sem reinterpreta-los "
+                    "como aconselhamento juridico."
+                ),
+            ],
+        )
+
+    def _build_payload(self, query: JurisprudenceQuery) -> dict[str, str | int]:
+        return {
+            "b": "ACOR",
+            "O": "JT",
+            "livre": query.text,
+            "num_processo": query.number,
+        }
+
+    def _request_text(self, method: str, path: str, **kwargs: Any) -> str:
+        self._respect_rate_limit()
+        url = urljoin(self.config.stj_scon_url.rstrip("/") + "/", path.lstrip("/"))
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "User-Agent": self.config.user_agent,
+        }
+        try:
+            response = self.session.request(
+                method,
+                url,
+                headers=headers,
+                timeout=self.config.timeout,
+                **kwargs,
+            )
+        except requests.RequestException as exc:
+            raise SourceUnavailableError(f"STJ/SCON request failed: {exc}") from exc
+
+        response.encoding = response.encoding or "utf-8"
+        text = response.text
+        if response.status_code in {401, 403} and _looks_like_access_control(text):
+            raise AccessControlRequiredError("STJ/SCON requires access-control validation")
+        if response.status_code == 429:
+            raise RateLimitDetectedError("STJ/SCON returned HTTP 429")
+        if response.status_code >= 500:
+            raise SourceUnavailableError(f"STJ/SCON returned HTTP {response.status_code}")
+        if response.status_code >= 400:
+            raise SourceUnavailableError(
+                f"STJ/SCON rejected request with HTTP {response.status_code}"
+            )
+        if _looks_like_access_control(text):
+            raise AccessControlRequiredError("STJ/SCON requires captcha or access control")
+        return text
+
+    def _respect_rate_limit(self) -> None:
+        interval = self.config.rate_limit_interval
+        if interval <= 0:
+            return
+        elapsed = time.monotonic() - self._last_request
+        if elapsed < interval:
+            time.sleep(interval - elapsed)
+        self._last_request = time.monotonic()
+
+
+def parse_stj_scon_results(
+    html: str,
+    *,
+    query: JurisprudenceQuery,
+    trace: SourceTrace,
+    base_url: str,
+) -> SearchPage:
+    """Parse a sanitized STJ SCON result page into normalized results."""
+
+    if _looks_like_access_control(html):
+        raise AccessControlRequiredError("STJ/SCON returned captcha/access-control HTML")
+
+    soup = BeautifulSoup(html, "html.parser")
+    result_root = soup.select_one("#resultados") or soup.select_one(".resultados")
+    if result_root is None:
+        if "resultado" in html.lower() and "nenhum" in html.lower():
+            return SearchPage(
+                source="stj_scon",
+                total=0,
+                start=0,
+                end=0,
+                page=query.page,
+                page_size=query.page_size,
+                results=[],
+                source_trace=trace,
+            )
+        raise ParserContractChangedError("STJ/SCON result container not found")
+
+    total, start, end = _parse_pagination(result_root.get_text(" ", strip=True))
+    results: list[JurisprudenceResult] = []
+    for index, item in enumerate(result_root.select(".documento, .resultado"), start=1):
+        anchor = item.select_one("a.doclink, a[href]")
+        registry_number = _text(item, ".registro") or _extract_registry(anchor)
+        case_number = _text(item, ".processo") or (
+            anchor.get_text(" ", strip=True) if anchor else ""
+        )
+        if not registry_number and not case_number:
+            continue
+        document_url = (
+            urljoin(base_url.rstrip("/") + "/", str(anchor.get("href"))) if anchor else None
+        )
+        result_trace = SourceTrace(
+            provider=trace.provider,
+            endpoint=trace.endpoint,
+            query=trace.query,
+            source_url=document_url or trace.source_url,
+            limitations=trace.limitations,
+        )
+        case_class = _text(item, ".classe") or ""
+        result = JurisprudenceResult(
+            id=f"stj-scon-{registry_number or index}",
+            source="stj_scon",
+            court="STJ",
+            type="acordao",
+            number=case_number or registry_number,
+            summary=_text(item, ".ementa") or None,
+            rapporteur=_text(item, ".relator") or None,
+            updated_at=_text(item, ".data-publicacao") or _text(item, ".data-julgamento") or None,
+            highlights={},
+            source_trace=result_trace,
+            raw={
+                "classe": case_class,
+                "registro": registry_number,
+                "registry_number": registry_number,
+                "orgao_julgador": _text(item, ".orgao-julgador"),
+                "data_julgamento": _text(item, ".data-julgamento"),
+                "data_publicacao": _text(item, ".data-publicacao"),
+                "document_url": document_url,
+            },
+        )
+        results.append(result)
+
+    if not results and total > 0:
+        raise ParserContractChangedError("STJ/SCON parser found total results but no items")
+
+    return SearchPage(
+        source="stj_scon",
+        total=total or len(results),
+        start=start or (1 if results else 0),
+        end=end or len(results),
+        page=query.page,
+        page_size=query.page_size,
+        results=results,
+        source_trace=trace,
+    )
+
+
+def _parse_pagination(text: str) -> tuple[int, int, int]:
+    match = re.search(r"Resultados\s+(\d+)\s+a\s+(\d+)\s+de\s+(\d+)", text, re.I)
+    if not match:
+        return 0, 0, 0
+    start, end, total = (int(match.group(index)) for index in (1, 2, 3))
+    return total, start, end
+
+
+def _text(item: Any, selector: str) -> str:
+    element = item.select_one(selector)
+    return element.get_text(" ", strip=True) if element else ""
+
+
+def _extract_registry(anchor: Any) -> str:
+    if anchor is None:
+        return ""
+    href = str(anchor.get("href") or "")
+    match = re.search(r"num_registro=(\d+)", href)
+    return match.group(1) if match else ""
+
+
+def _looks_like_access_control(html: str) -> bool:
+    lowered = html.lower()
+    if "id=\"resultados\"" in lowered or "class=\"documento\"" in lowered:
+        return False
+    if "challenge-error-text" in lowered or "cf-error" in lowered:
+        return True
+    if "g-recaptcha" in lowered or "recaptcha_response_token" in lowered:
+        return True
+    if "captcha" in lowered and "resultado" not in lowered:
+        return True
+    return False

@@ -19,9 +19,10 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 class FakeResponse:
-    def __init__(self, payload, status_code: int = 200):
+    def __init__(self, payload, status_code: int = 200, text: str = ""):
         self.payload = payload
         self.status_code = status_code
+        self.text = text
 
     def json(self):
         if isinstance(self.payload, Exception):
@@ -359,11 +360,16 @@ def test_http_500_becomes_source_unavailable():
 
 
 def test_http_400_becomes_source_unavailable():
-    session = FakeSession([FakeResponse({}, status_code=400)])
+    session = FakeSession([FakeResponse({}, status_code=400, text="Requisição inválida")])
     provider = BnpPangeaProvider(session=session)
 
-    with pytest.raises(SourceUnavailableError):
-        provider.get_parameters()
+    with pytest.raises(SourceUnavailableError) as exc_info:
+        provider.search(JurisprudenceQuery(text="infanticidio"))
+
+    message = str(exc_info.value)
+    assert "HTTP 400" in message
+    assert "Requisição inválida" in message
+    assert "infanticidio" in message
 
 
 def test_request_exception_becomes_source_unavailable():

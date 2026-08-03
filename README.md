@@ -28,6 +28,28 @@
   <a href="docs/architecture.md">Arquitetura</a>
   ·
   <a href="docs/responsible-use.md">Uso responsavel</a>
+  ·
+  <a href="docs/source-capabilities.md">Fontes</a>
+  ·
+  <a href="docs/provider-coverage-map.md">Cobertura</a>
+  ·
+  <a href="docs/extraction-pipeline.md">Pipeline</a>
+  ·
+  <a href="docs/storage.md">Storage</a>
+  ·
+  <a href="docs/provider-development.md">Providers</a>
+  ·
+  <a href="docs/case-studies.md">Casos de uso</a>
+  ·
+  <a href="docs/audience-ux.md">UX por publico</a>
+  ·
+  <a href="docs/use-case-validation-matrix.md">Matriz de validacao</a>
+  ·
+  <a href="docs/release-checklist.md">Release</a>
+  ·
+  <a href="docs/mcp.md">MCP</a>
+  ·
+  <a href="docs/elite-extraction-blueprint.md">Blueprint de extracao</a>
 </p>
 
 ## O que e
@@ -35,12 +57,21 @@
 NanoJuris e uma biblioteca Python open source para consulta, normalizacao e
 auditoria de jurisprudencia publica brasileira.
 
-O projeto nasce com o provider `bnp_pangea`, que consulta a API publica usada
-pelo frontend do Banco Nacional de Precedentes/Pangea. A arquitetura foi
-desenhada para receber fontes JSON e HTML legadas. O provider `tjsp_cjsg`
-consulta a pesquisa publica de jurisprudencia do TJSP/CJSG quando a fonte nao
-exige controle de acesso. Para o proximo passo de expansão, a pesquisa inicial
-para o provider STJ ja esta documentada em [docs/stj-provider-research.md](docs/stj-provider-research.md).
+O projeto nasce com os providers `bnp_pangea`, `comunica_pje`, `tjdf_juris`,
+`tjac_cjsg`, `tjal_cjsg`, `tjam_cjsg`, `tjms_cjsg`, `stm_jurisprudencia`, `tjsp_cjsg`, `tjsp_eproc_jurisprudencia`, `tjsp_esaj_cpopg`, `trf4_eproc_jurisprudencia` e
+`stj_scon`. `bnp_pangea` consulta a API publica usada pelo
+frontend do Banco Nacional de Precedentes/Pangea. `comunica_pje` consulta a API
+publica do Comunica PJe/DJEN para comunicacoes judiciais. `tjdf_juris` consulta
+a jurisprudencia publica do TJDFT/SISTJ. `tjac_cjsg`, `tjal_cjsg`, `tjam_cjsg` e
+`tjms_cjsg` consultam a jurisprudencia publica CJSG/e-SAJ de TJAC, TJAL, TJAM e TJMS. `tjsp_cjsg` consulta a
+pesquisa publica de jurisprudencia do TJSP/CJSG quando a fonte nao exige
+controle de acesso. `tjsp_eproc_jurisprudencia` consulta a jurisprudencia
+publica do eproc/TJSP. `trf4_eproc_jurisprudencia` consulta a jurisprudencia
+publica do eproc/TRF4 e suporta inteiro teor publico. `tjsp_esaj_cpopg` consulta processo publico de primeiro grau
+por numero CNJ, nome da parte e OAB no e-SAJ/TJSP. `stm_jurisprudencia` consulta
+a jurisprudencia publica do STM/JMU e preserva a URL publica de inteiro teor. `stj_scon` inicia a cobertura STJ/SCON por acordaos
+com parser offline, capabilities declaradas e ficha publica em
+[docs/stj-source-profile.md](docs/stj-source-profile.md).
 
 ## Por que existe
 
@@ -52,11 +83,47 @@ NanoJuris entrega:
 
 - modelos tipados;
 - provider BNP/Pangea funcional;
+- provider Comunica PJe/DJEN para comunicacoes judiciais publicas;
+- provider TJDFT/SISTJ para jurisprudencia publica;
+- provider TJMS/CJSG para jurisprudencia publica;
+- provider STM/JMU para jurisprudencia publica e inteiro teor;
+- provider TJSP/CJSG parcial para jurisprudencia publica e inteiro teor;
+- provider TJSP/eproc para jurisprudencia publica;
+- provider TJSP/e-SAJ CPOPg para consulta processual publica por numero CNJ,
+  nome da parte e OAB;
+- provider TRF4/eproc para jurisprudencia publica e inteiro teor;
+- provider STJ/SCON inicial com parser offline de acordaos;
 - cliente Python simples;
 - CLI;
-- exportacao JSON, JSONL e Markdown;
+- exportacao JSON, JSONL, CSV e Markdown;
 - rastreabilidade de fonte;
 - governanca de uso responsavel.
+
+O plano de evolucao extraction-first, com arquitetura alvo, modelos canonicos,
+MCP e fontes nacionais prioritarias, esta em
+[docs/elite-extraction-blueprint.md](docs/elite-extraction-blueprint.md).
+
+As capacidades declaradas por fonte estao documentadas em
+[docs/source-capabilities.md](docs/source-capabilities.md).
+O mapa de cobertura e oportunidades de providers brasileiros esta em
+[docs/provider-coverage-map.md](docs/provider-coverage-map.md).
+Os contratos reutilizaveis de aquisicao e parsing estao em
+[docs/extraction-pipeline.md](docs/extraction-pipeline.md).
+A estrategia SQLite-first com caminho futuro para PostgreSQL esta em
+[docs/storage.md](docs/storage.md).
+O guia para novas fontes e providers esta em
+[docs/provider-development.md](docs/provider-development.md).
+As simulacoes de uso real por advogados, pesquisadores e desenvolvedores estao
+em [docs/case-studies.md](docs/case-studies.md).
+Os principios de UX direta para advogados, desenvolvedores, jurimetristas,
+analistas de dados e agentes de IA estao em
+[docs/audience-ux.md](docs/audience-ux.md).
+A matriz pratica para testar pontos implementados, parciais e planejados esta em
+[docs/use-case-validation-matrix.md](docs/use-case-validation-matrix.md).
+O relatorio mais recente de validacao por areas tecnicas e casos de uso esta em
+[docs/validation-report-2026-08-02.md](docs/validation-report-2026-08-02.md).
+O checklist de release inicial publica esta em
+[docs/release-checklist.md](docs/release-checklist.md).
 
 ## Instalacao local
 
@@ -101,6 +168,79 @@ JSONL:
 ```bash
 nanojuris buscar "ICMS consumidor final" --formato jsonl
 ```
+
+JSONL canonico para pipelines de dados:
+
+```bash
+nanojuris buscar "ICMS consumidor final" --formato canonical-jsonl
+```
+
+CSV com campos objetivos de extracao:
+
+```bash
+nanojuris buscar "ICMS consumidor final" --formato csv
+```
+
+Fontes e capacidades:
+
+```bash
+nanojuris fontes
+nanojuris diagnostico --fonte tjsp_cjsg
+nanojuris buscar "infanticidio" --fonte comunica_pje --orgaos TJSP --limite 5
+nanojuris buscar "infanticidio" --fonte comunica_pje --publicacao-de 2026-07-31 --publicacao-ate 2026-07-31
+nanojuris buscar "infanticidio" --fonte tjdf_juris --limite 5
+nanojuris buscar "infanticidio" --fonte tjac_cjsg --limite 5
+nanojuris buscar "infanticidio" --fonte tjal_cjsg --limite 5
+nanojuris buscar "infanticidio" --fonte tjam_cjsg --limite 5
+nanojuris buscar "infanticidio" --fonte tjms_cjsg --limite 5
+nanojuris buscar "deserção" --fonte stm_jurisprudencia --limite 5
+nanojuris buscar "infanticidio" --fonte tjsp_eproc_jurisprudencia --limite 5
+nanojuris buscar "deserção" --fonte trf4_eproc_jurisprudencia --limite 5
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --parte "ANDERSON DE AZEVEDO GONCALVES" --limite 4
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --oab "123456" --limite 2
+nanojuris buscar "" --fonte tjsp_esaj_cpopg --numero "0003938-14.2017.8.26.0323" --detalhar
+nanojuris tribunais --uf SP --implementados
+```
+
+Salvar resultados canonicos em SQLite:
+
+```bash
+nanojuris buscar "ICMS consumidor final" --store nanojuris.db
+```
+
+Consultar o store local:
+
+```bash
+nanojuris store stats nanojuris.db
+nanojuris store query nanojuris.db --kind decision --tribunal TJSP
+nanojuris store get nanojuris.db decision dec-1
+nanojuris store runs nanojuris.db
+nanojuris store records nanojuris.db run-...
+nanojuris store export nanojuris.db run-... --formato csv
+nanojuris store export nanojuris.db run-... --formato jsonl --limite 100 --offset 100
+nanojuris documento tjsp-cjsg-20787558-0 --fonte tjsp_cjsg
+```
+
+Use `--formato markdown` para leitura humana e auditoria, `csv` para planilhas e
+jurimetria, `jsonl` para pipelines de dados e `json` para agentes e integracoes.
+Use `--offset` para paginar runs grandes sem perder o `run_id` auditavel.
+Use `documento` apenas para inteiro teor que a fonte publica entrega sem login,
+captcha ou outro controle de acesso.
+Use `tribunais` para descobrir o mapa brasileiro de tribunais conhecido pela lib,
+mesmo antes de todos os providers estarem implementados.
+
+## MCP local
+
+Instale o extra MCP e rode o servidor local:
+
+```bash
+pip install "nanojuris[mcp]"
+nanojuris-mcp
+```
+
+As tools MCP iniciais expõem fontes, diagnostico, busca, exportacao de
+resultados e consulta a stores SQLite locais. Detalhes em
+[docs/mcp.md](docs/mcp.md).
 
 ## Provider inicial
 
@@ -178,7 +318,7 @@ NanoJuris nao tenta burlar fontes publicas. O projeto deve:
 - `v0.4`: STF.
 - `v0.5`: MCP local para agentes de IA.
 - `v0.6`: TSE/TREs.
-- `v0.7`: TRF4 e TST.
+- `v0.7`: TST e ampliacao de TRFs.
 
 ## Projeto independente
 
