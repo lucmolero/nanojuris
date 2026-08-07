@@ -11,6 +11,8 @@ Para priorizacao nacional por familia de sistema e tribunal, veja
 [provider-coverage-map.md](provider-coverage-map.md).
 Para maturidade, lacunas e dossies tecnicos por provider, veja
 [source-contracts.md](source-contracts.md).
+Para uso por agentes de IA com MCP local, veja
+[ai-agent-usage.md](ai-agent-usage.md).
 
 ## Por que existe
 

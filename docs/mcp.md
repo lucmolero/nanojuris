@@ -5,6 +5,9 @@ jurisprudencia brasileira de forma auditavel. O MCP nao deve interpretar merito
 juridico, recomendar tese ou redigir argumentos. Ele deve expor dados, fontes,
 documentos e traces.
 
+Para instalacao e prompts de uso por agentes, veja
+[ai-agent-usage.md](ai-agent-usage.md).
+
 ## Principios
 
 - Toda resposta deve ser JSON serializavel.
