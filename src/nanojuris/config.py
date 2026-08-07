@@ -10,10 +10,16 @@ class NanoJurisConfig:
     """Configuration shared by clients and providers."""
 
     timeout: float = 20.0
+    verify_ssl: bool = True
     user_agent: str = "NanoJuris/0.1 (+https://github.com/lucmolero/nanojuris)"
     bnp_api_url: str = "https://pangeabnp.pdpj.jus.br/api/v1"
     comunica_pje_url: str = "https://comunicaapi.pje.jus.br"
     stf_juris_url: str = "https://jurisprudencia.stf.jus.br"
+    stf_informativo_data_url: str = (
+        "https://www.stf.jus.br/arquivo/cms/informativoSTF/anexo/"
+        "Informativo_Dados/Dados_InformativosSTF.xlsx"
+    )
+    stf_informativo_url: str = "https://portal.stf.jus.br/textos/verTexto.asp"
     stf_portal_url: str = "https://portal.stf.jus.br"
     stj_url: str = "https://processo.stj.jus.br"
     stj_scon_url: str = "https://scon.stj.jus.br"

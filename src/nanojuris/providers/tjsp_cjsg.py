@@ -46,14 +46,20 @@ class CjsgAccessDiagnostic:
     has_recaptcha_widget: bool
     has_access_control_route: bool
     has_login_script: bool
+    has_empty_session: bool
 
     @property
     def access_control_required(self) -> bool:
-        return not self.has_result_container and (
-            self.has_recaptcha_field
-            or self.has_uuid_captcha_field
-            or self.has_recaptcha_widget
-            or self.has_access_control_route
+        return (
+            not self.has_result_container
+            and not self.has_download_links
+            and (
+                self.has_recaptcha_field
+                or self.has_uuid_captcha_field
+                or self.has_recaptcha_widget
+                or self.has_access_control_route
+                or self.has_empty_session
+            )
         )
 
     @property
@@ -86,10 +92,20 @@ class TjspCjsgProvider(JurisprudenceProvider):
         endpoint = "/resultadoCompleta.do"
         payload = self._build_payload(query)
         html = self._request_text("POST", endpoint, data=payload)
+        trace_query: dict[str, Any] = {"payload": payload}
+        if query.page > 1 and _looks_like_cjsg_results(html):
+            decision_type = self._first_decision_type(payload)
+            endpoint = f"/trocaDePagina.do?tipoDeDecisao={decision_type}&pagina={query.page}"
+            html = self._request_text("GET", endpoint)
+            trace_query = {
+                "payload": payload,
+                "tipoDeDecisao": decision_type,
+                "pagina": query.page,
+            }
         trace = SourceTrace(
             provider=self.name,
-            endpoint=endpoint,
-            query=payload,
+            endpoint=endpoint.split("?", 1)[0],
+            query=trace_query,
             source_url=urljoin(self.config.tjsp_cjsg_url.rstrip("/") + "/", endpoint.lstrip("/")),
             limitations=[
                 "Fonte HTML publica do TJSP/CJSG sujeita a mudancas de layout.",
@@ -184,6 +200,7 @@ class TjspCjsgProvider(JurisprudenceProvider):
             ],
             endpoints=[
                 "POST /resultadoCompleta.do",
+                "GET /trocaDePagina.do?tipoDeDecisao=<tipo>&pagina=<n>",
                 "GET /getArquivo.do?cdAcordao=<id>&cdForo=<foro>",
             ],
             supports_full_text=True,
@@ -266,14 +283,18 @@ class TjspCjsgProvider(JurisprudenceProvider):
 
         if response.status_code == 429:
             raise RateLimitDetectedError("TJSP/CJSG returned HTTP 429")
+        text = decode_cjsg_response_text(response)
+        diagnostic = diagnose_cjsg_access(text)
+        if response.status_code == 404 and diagnostic.has_empty_session:
+            raise AccessControlRequiredError(
+                f"TJSP/CJSG requires an active public search session ({diagnostic.summary()})"
+            )
         if response.status_code >= 500:
             raise SourceUnavailableError(f"TJSP/CJSG returned HTTP {response.status_code}")
         if response.status_code >= 400:
             raise SourceUnavailableError(
                 f"TJSP/CJSG rejected request with HTTP {response.status_code}"
             )
-        text = decode_cjsg_response_text(response)
-        diagnostic = diagnose_cjsg_access(text)
         if diagnostic.access_control_required:
             raise AccessControlRequiredError(
                 "TJSP/CJSG requires captcha or another access-control step "
@@ -327,6 +348,15 @@ class TjspCjsgProvider(JurisprudenceProvider):
             )
         return match.group("cd"), match.group("foro") or "0"
 
+    @staticmethod
+    def _first_decision_type(payload: dict[str, str | list[str]]) -> str:
+        value = payload.get("tipoDecisaoSelecionados")
+        if isinstance(value, list) and value:
+            return str(value[0])
+        if isinstance(value, str) and value:
+            return value
+        return "A"
+
 
 def parse_cjsg_results(
     html: str,
@@ -345,7 +375,11 @@ def parse_cjsg_results(
         raise AccessControlRequiredError(f"{source_label} returned captcha/access-control HTML")
 
     soup = BeautifulSoup(html, "html.parser")
-    result_root = soup.select_one("#divDadosResultado-A") or soup.select_one("#tdResultados")
+    result_root = (
+        soup.select_one("#divDadosResultado-A")
+        or soup.select_one("#tdResultados")
+        or (soup if soup.select("a.downloadEmenta") else None)
+    )
     if result_root is None:
         if "Resultado consulta" in html or "Resultados" in html:
             return SearchPage(
@@ -360,7 +394,7 @@ def parse_cjsg_results(
             )
         raise ParserContractChangedError(f"{source_label} result container not found")
 
-    total, start, end = _parse_pagination(soup.get_text(" ", strip=True))
+    total, start, end = _parse_pagination(soup.get_text(" ", strip=True), soup=soup)
     results: list[JurisprudenceResult] = []
     seen: set[tuple[str, str]] = set()
     for anchor in result_root.select("a.downloadEmenta"):
@@ -386,7 +420,7 @@ def parse_cjsg_results(
         )
         result_trace = SourceTrace(
             provider=trace.provider,
-            endpoint="/resultadoCompleta.do",
+            endpoint=trace.endpoint,
             query=trace.query,
             source_url=full_text_url,
             limitations=trace.limitations,
@@ -462,6 +496,7 @@ def cjsg_decision_bundle_to_document(
     content_bytes = content.encode("utf-8")
     metadata = dict(bundle.raw or {})
     warnings = list(metadata.get("warnings") or [])
+    access_status = _metadata_access_status(metadata)
     status = (
         ExtractionStatus.COMPLETE if content.strip() and not warnings else ExtractionStatus.PARTIAL
     )
@@ -476,12 +511,13 @@ def cjsg_decision_bundle_to_document(
         sha256=hashlib.sha256(content_bytes).hexdigest(),
         byte_size=len(content_bytes),
         retrieved_at=bundle.source_trace.retrieved_at if bundle.source_trace else None,
-        access_status=AccessStatus.PUBLIC,
+        access_status=access_status,
         source_trace=bundle.source_trace,
         extraction_trace=ExtractionTrace(
             parser=parser,
             parser_version="1",
             status=status,
+            access_status=access_status,
             content_sha256=hashlib.sha256(content_bytes).hexdigest(),
             content_bytes=len(content_bytes),
             warnings=warnings,
@@ -491,12 +527,66 @@ def cjsg_decision_bundle_to_document(
     )
 
 
-def _parse_pagination(text: str) -> tuple[int, int, int]:
+def _metadata_access_status(metadata: dict[str, Any]) -> AccessStatus:
+    raw_status = metadata.get("access_status")
+    if isinstance(raw_status, AccessStatus):
+        return raw_status
+    if isinstance(raw_status, str):
+        try:
+            return AccessStatus(raw_status)
+        except ValueError:
+            return AccessStatus.PARTIAL
+    return AccessStatus.PUBLIC
+
+
+def _parse_pagination(text: str, *, soup: BeautifulSoup | None = None) -> tuple[int, int, int]:
     match = re.search(r"Resultados\s+(\d+)\s+a\s+(\d+)\s+de\s+(\d+)", text, re.I)
-    if not match:
+    if match:
+        start, end, total = (int(match.group(index)) for index in (1, 2, 3))
+        return total, start, end
+    if soup is None:
         return 0, 0, 0
-    start, end, total = (int(match.group(index)) for index in (1, 2, 3))
-    return total, start, end
+    total = _parse_total_from_fragment(soup, text)
+    row_numbers = _parse_result_row_numbers(soup)
+    if row_numbers:
+        return total, row_numbers[0], row_numbers[-1]
+    return total, 0, 0
+
+
+def _parse_total_from_fragment(soup: BeautifulSoup, text: str) -> int:
+    total_input = soup.select_one("#totalResultadoAbaRetornoFiltro-A")
+    if total_input is not None:
+        raw_value = str(total_input.get("value") or "")
+        if raw_value.isdigit():
+            return int(raw_value)
+    match = re.search(r"Ac[oó]rd[aã]os\((\d+)\)", text, re.I)
+    if match:
+        return int(match.group(1))
+    return 0
+
+
+def _parse_result_row_numbers(soup: BeautifulSoup) -> list[int]:
+    numbers: list[int] = []
+    for strong in soup.select("tr.fundocinza1 td.ementaClass strong"):
+        match = re.search(r"\d+", strong.get_text(" ", strip=True))
+        if match:
+            numbers.append(int(match.group(0)))
+    if numbers:
+        return numbers
+    for strong in soup.select("td.ementaClass strong"):
+        match = re.search(r"\d+", strong.get_text(" ", strip=True))
+        if match:
+            numbers.append(int(match.group(0)))
+    return numbers
+
+
+def _looks_like_cjsg_results(html: str) -> bool:
+    diagnostic = diagnose_cjsg_access(html)
+    if diagnostic.has_result_container or diagnostic.has_download_links:
+        return True
+    soup = BeautifulSoup(html, "html.parser")
+    total, start, end = _parse_pagination(soup.get_text(" ", strip=True), soup=soup)
+    return total > 0 and start > 0 and end >= start
 
 
 def _extract_labeled_fields(container: Any) -> dict[str, str]:
@@ -547,6 +637,7 @@ def extract_cjsg_document_text(html: str) -> tuple[str, dict[str, Any]]:
 
     warnings: list[str] = []
     stripped = html.strip()
+    raw_lowered = stripped.lower()
     if stripped.startswith("%PDF"):
         warnings.append(
             "CJSG returned PDF bytes; NanoJuris preserves metadata but does not parse PDF text yet."
@@ -554,9 +645,19 @@ def extract_cjsg_document_text(html: str) -> tuple[str, dict[str, Any]]:
         return "", {
             "document_title": "TJSP/CJSG inteiro teor em PDF",
             "source_content_type": "application/pdf",
+            "access_status": AccessStatus.PUBLIC.value,
             "text_characters": 0,
             "warnings": warnings,
         }
+    access_status = AccessStatus.PUBLIC
+    if (
+        "verificarloginarquivo" in raw_lowered
+        or "usuariologadonocasserver" in raw_lowered
+        or "j_spring_cas_security_check" in raw_lowered
+        or "sajcas/login" in raw_lowered
+    ):
+        access_status = AccessStatus.LOGIN_REQUIRED
+        warnings.append("CJSG document response is a login/access verification page.")
 
     soup = BeautifulSoup(html, "html.parser")
     for element in soup.select("script, style, noscript, iframe, object"):
@@ -583,12 +684,14 @@ def extract_cjsg_document_text(html: str) -> tuple[str, dict[str, Any]]:
         text = _normalize_document_text(soup.get_text("\n", strip=True))
     lowered = text.lower()
     if "captcha" in lowered or "recaptcha" in lowered:
+        access_status = AccessStatus.ACCESS_CONTROL_REQUIRED
         warnings.append("CJSG document response contains captcha/access-control text.")
     if len(text) < 120:
         warnings.append("CJSG document text is unusually short for a full-text decision.")
     return text, {
         "document_title": title,
         "source_content_type": "text/html",
+        "access_status": access_status.value,
         "text_characters": len(text),
         "warnings": warnings,
     }
@@ -624,4 +727,5 @@ def diagnose_cjsg_access(html: str) -> CjsgAccessDiagnostic:
         has_recaptcha_widget="g-recaptcha" in lowered,
         has_access_control_route="captchacontroleacesso" in lowered,
         has_login_script="verificarlogin" in lowered or "sajcas" in lowered,
+        has_empty_session="emptysession.jsp" in lowered or "empty session" in lowered,
     )

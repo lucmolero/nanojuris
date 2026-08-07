@@ -82,6 +82,34 @@ SOURCE_OVERRIDES: dict[str, dict[str, Any]] = {
             "Promover inteiro teor do portal STF somente quando responder sem 403 em sessao limpa.",
         ],
     },
+    "stf_informativo": {
+        "contract_level": 5,
+        "source_family": "xlsx_jurisprudencia_curada_superior",
+        "mcp_recommendation": (
+            "Use como fonte STF preferencial para teses/resumos oficiais quando a API JSON "
+            "de jurisprudencia estiver sob WAF."
+        ),
+        "jurimetry_fit": "alto para estudos tematicos de teses oficiais e materias do STF.",
+        "risk_level": "baixo",
+        "gaps": [
+            "Adicionar amostras reais por ramo do direito e repercussao geral.",
+            "Versionar dicionario de colunas quando o STF alterar a planilha.",
+        ],
+    },
+    "stj_informativo": {
+        "contract_level": 4,
+        "source_family": "html_jurisprudencia_curada_superior",
+        "mcp_recommendation": (
+            "Use para notas oficiais do STJ; complemente com SCON quando acordao integral "
+            "estiver acessivel sem validacao."
+        ),
+        "jurimetry_fit": "medio-alto para teses curadas do STJ; limitado para contagem integral.",
+        "risk_level": "medio",
+        "gaps": [
+            "Adicionar fixtures de multiplas notas, zero resultado e links CNOT.",
+            "Mapear filtros oficiais por ramo, orgao julgador e ministro.",
+        ],
+    },
     "stj_scon": {
         "contract_level": 3,
         "source_family": "html_jurisprudencia_superior",

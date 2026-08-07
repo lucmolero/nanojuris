@@ -667,6 +667,43 @@ Pesquisa tecnica: [stj-provider-research.md](stj-provider-research.md).
 
 A primeira pesquisa tecnica para o STJ esta em [stj-provider-research.md](stj-provider-research.md). Ela separa os fluxos de SCON, precedentes qualificados e publicacoes, define criterios de fixture e marca o escopo inicial como SCON para acordaos.
 
+## `stj_informativo`
+
+Provider para notas publicas do Informativo de Jurisprudencia do STJ.
+
+Escopo atual:
+
+```text
+GET /jurisprudencia/externo/informativo/?acao=pesquisar&livre=<termo>&operador=E&b=INFJ&tp=T
+```
+
+Campos extraidos:
+
+```text
+informativo
+period
+case_number
+rapporteur
+judging_body
+judgment_date
+title
+summary
+document_url
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "infanticidio" --fonte stj_informativo --limite 5
+```
+
+Use este provider para conteudo curado de informativos e teses resumidas. Para
+busca integral de acordaos, combine com `stj_scon` quando a fonte responder sem
+verificacao automatica. Links de inteiro teor podem apontar para rotas SCON
+protegidas; o provider nao implementa bypass.
+
+Ficha publica: [source-contracts/stj_informativo.md](source-contracts/stj_informativo.md).
+
 ## `stf_juris`
 
 Provider inicial para acordaos publicos do STF por API JSON observada no
@@ -709,6 +746,51 @@ Limitacoes:
 
 Ficha publica: [source-contracts/stf_juris.md](source-contracts/stf_juris.md).
 
+## `stf_informativo`
+
+Provider para a planilha publica estruturada do Informativo STF.
+
+Escopo atual:
+
+```text
+GET /arquivo/cms/informativoSTF/anexo/Informativo_Dados/Dados_InformativosSTF.xlsx
+```
+
+Campos extraidos:
+
+```text
+informativo
+case_number
+case_class
+rapporteur
+redator_acordao
+judging_body
+judgment_date
+title
+thesis
+summary
+news
+law_branch
+matter
+is_repercussao_geral
+tema_rg
+legislation
+ods
+```
+
+Exemplo:
+
+```bash
+nanojuris buscar "ICMS" --fonte stf_informativo --limite 5
+nanojuris buscar "" --fonte stf_informativo --numero "ADI 7632"
+```
+
+Este e o caminho mais estavel para conteudo juridico valido do STF quando a API
+JSON de jurisprudencia estiver sob AWS WAF. Ele entrega teses e resumos
+oficiais sem exigir download de PDF.
+
+Ficha publica: [source-contracts/stf_informativo.md](source-contracts/stf_informativo.md).
+
 ## `tjsp_cjsg`
 
 Provider para a Consulta de Jurisprudencia do TJSP/CJSG.
@@ -717,11 +799,14 @@ Provider para a Consulta de Jurisprudencia do TJSP/CJSG.
 
 ```text
 POST /cjsg/resultadoCompleta.do
+GET  /cjsg/trocaDePagina.do?tipoDeDecisao=<tipo>&pagina=<n>
 GET  /cjsg/getArquivo.do?cdAcordao=<id>&cdForo=<foro>
 ```
 
 O provider busca a consulta completa publica e normaliza o HTML de resultados
-para `JurisprudenceResult`.
+para `JurisprudenceResult`. A paginacao por `trocaDePagina.do` so e usada como
+continuacao de uma busca principal publica e valida na mesma sessao; se a fonte
+retornar captcha, formulario de controle ou `emptySession.jsp`, o provider para.
 
 Campos extraidos:
 
@@ -737,6 +822,7 @@ comarca
 orgao julgador
 data de registro
 URL de inteiro teor
+status de acesso do documento
 ```
 
 ### Uso
@@ -756,8 +842,11 @@ page = client.search("infanticidio", source="tjsp_cjsg", types=["acordao"])
 
 ### Controle de acesso
 
-O TJSP/CJSG pode exigir captcha ou outro controle. O NanoJuris nao implementa
-bypass. Quando isso acontece, o provider levanta `AccessControlRequiredError`.
+O TJSP/CJSG pode exigir captcha, sessao ativa, login ou outro controle. O
+NanoJuris nao implementa bypass. Quando isso acontece na busca, o provider
+levanta `AccessControlRequiredError`. Quando `getArquivo.do` redireciona para
+verificacao de login/CAS, `get_document` retorna documento parcial com
+`access_status=login_required`, em vez de marcar texto vazio como publico.
 
 ### Teste live opcional
 

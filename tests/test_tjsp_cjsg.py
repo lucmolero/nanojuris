@@ -6,7 +6,7 @@ import pytest
 import requests
 
 from nanojuris.errors import AccessControlRequiredError, ParserContractChangedError
-from nanojuris.models import ExtractionStatus, JurisprudenceQuery, SourceTrace
+from nanojuris.models import AccessStatus, ExtractionStatus, JurisprudenceQuery, SourceTrace
 from nanojuris.providers.tjsp_cjsg import (
     TjspCjsgProvider,
     decode_cjsg_response_text,
@@ -23,6 +23,7 @@ class FakeResponse:
         self.text = text
         self.status_code = status_code
         self.encoding = "utf-8"
+        self.headers = {}
 
 
 def test_decode_cjsg_response_uses_detected_encoding_without_charset():
@@ -56,6 +57,51 @@ def _fixture_html() -> str:
 
 def _fixture(name: str) -> str:
     return (FIXTURES / name).read_text(encoding="utf-8")
+
+
+def _cjsg_page_fragment() -> str:
+    return """
+    <span style="display: none;" id="nomeAbaRetornoFiltro-A">Acordaos(858)</span>
+    <input id="totalResultadoAbaRetornoFiltro-A" type="hidden" value="858" />
+    <table>
+      <tr class="fundocinza1">
+        <td class="ementaClass"><strong>21 -</strong></td>
+        <td>
+          <table>
+            <tr class="ementaClass">
+              <td colspan="2">
+                <a class="esajLinkLogin downloadEmenta"
+                   cdAcordao="20588041"
+                   cdForo="0">1500209-12.2025.8.26.0585</a>
+              </td>
+            </tr>
+            <tr class="ementaClass2">
+              <td><strong>Classe/Assunto:</strong> Apelacao Criminal / Furto</td>
+            </tr>
+            <tr class="ementaClass2">
+              <td><strong>Relator(a):</strong> Fulano de Tal</td>
+            </tr>
+            <tr class="ementaClass2">
+              <td><strong>Comarca:</strong> Sao Paulo</td>
+            </tr>
+            <tr class="ementaClass2">
+              <td><strong>Orgao julgador:</strong> 1a Camara Criminal</td>
+            </tr>
+            <tr class="ementaClass2">
+              <td><strong>Data de publicacao:</strong> 06/08/2026</td>
+            </tr>
+            <tr class="ementaClass">
+              <td>
+                <textarea id="textAreaDados_20588041">
+                  Ementa publica extraida do fragmento paginado do CJSG.
+                </textarea>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    """
 
 
 def test_parse_cjsg_results_maps_fixture():
@@ -115,6 +161,24 @@ def test_provider_search_posts_cjsg_payload_and_parses_results():
     assert payload["dados.dtJulgamentoInicio"] == "01/01/2026"
 
 
+def test_provider_search_uses_troca_de_pagina_after_public_result_session():
+    session = FakeSession([FakeResponse(_fixture_html()), FakeResponse(_cjsg_page_fragment())])
+    provider = TjspCjsgProvider(session=session)
+
+    page = provider.search(JurisprudenceQuery(text="infanticidio", page=2, page_size=5))
+
+    assert len(page.results) == 1
+    assert page.total == 858
+    assert page.start == 21
+    assert page.end == 21
+    assert page.results[0].id == "tjsp-cjsg-20588041-0"
+    assert page.results[0].source_trace is not None
+    assert page.results[0].source_trace.endpoint == "/trocaDePagina.do"
+    assert session.calls[0]["method"] == "POST"
+    assert session.calls[1]["method"] == "GET"
+    assert session.calls[1]["url"].endswith("trocaDePagina.do?tipoDeDecisao=A&pagina=2")
+
+
 def test_provider_get_decisions_builds_getarquivo_url_and_extracts_text():
     session = FakeSession([FakeResponse(_fixture("tjsp_cjsg_document.html"))])
     provider = TjspCjsgProvider(session=session)
@@ -166,8 +230,31 @@ def test_extract_cjsg_document_text_marks_short_access_control_text():
     text, metadata = extract_cjsg_document_text("<html><body>captcha</body></html>")
 
     assert text == "captcha"
+    assert metadata["access_status"] == AccessStatus.ACCESS_CONTROL_REQUIRED.value
     assert metadata["warnings"] == [
         "CJSG document response contains captcha/access-control text.",
+        "CJSG document text is unusually short for a full-text decision.",
+    ]
+
+
+def test_extract_cjsg_document_text_marks_login_verification_page():
+    html = """
+    <html>
+      <script src="https://esaj.tjsp.jus.br/sajcas/verificarLogin.js"></script>
+      <script>
+        if (window.sajcas && window.sajcas.usuarioLogadoNoCasServer) {
+          var urlRetornoSistema = '/cjsg/getArquivo.do?cdAcordao=20787558&cdForo=0';
+        }
+      </script>
+    </html>
+    """
+
+    text, metadata = extract_cjsg_document_text(html)
+
+    assert text == ""
+    assert metadata["access_status"] == AccessStatus.LOGIN_REQUIRED.value
+    assert metadata["warnings"] == [
+        "CJSG document response is a login/access verification page.",
         "CJSG document text is unusually short for a full-text decision.",
     ]
 
@@ -184,6 +271,28 @@ def test_provider_get_document_marks_short_document_as_partial():
     assert document.extraction_trace.warnings == [
         "CJSG document text is unusually short for a full-text decision."
     ]
+
+
+def test_provider_get_document_marks_login_verification_status():
+    html = """
+    <html>
+      <script src="https://esaj.tjsp.jus.br/sajcas/verificarLogin.js"></script>
+      <script>
+        if (window.sajcas && window.sajcas.usuarioLogadoNoCasServer) {
+          var urlRetornoSistema = '/cjsg/getArquivo.do?cdAcordao=20787558&cdForo=0';
+        }
+      </script>
+    </html>
+    """
+    session = FakeSession([FakeResponse(html)])
+    provider = TjspCjsgProvider(session=session)
+
+    document = provider.get_document("tjsp-cjsg-20787558-0")
+
+    assert document.access_status == AccessStatus.LOGIN_REQUIRED
+    assert document.extraction_trace is not None
+    assert document.extraction_trace.access_status == AccessStatus.LOGIN_REQUIRED
+    assert document.extraction_trace.status == ExtractionStatus.PARTIAL
 
 
 def test_provider_detects_access_control_without_bypass():
@@ -206,6 +315,22 @@ def test_diagnose_cjsg_access_identifies_returned_form_with_captcha_fields():
     assert diagnostic.has_uuid_captcha_field is True
     assert diagnostic.has_access_control_route is True
     assert diagnostic.has_login_script is True
+    assert diagnostic.has_empty_session is False
+
+
+def test_provider_classifies_empty_session_pagination_as_access_control():
+    html = """
+    <html>
+      <body>
+        <h1>HTTP Status 404</h1>
+        <p>Message JSP file [/jsp/completa/emptySession.jsp] not found</p>
+      </body>
+    </html>
+    """
+    provider = TjspCjsgProvider(session=FakeSession([FakeResponse(html, status_code=404)]))
+
+    with pytest.raises(AccessControlRequiredError, match="active public search session"):
+        provider.search(JurisprudenceQuery(text="teste", page=2))
 
 
 def test_parse_cjsg_results_accepts_empty_result_page():

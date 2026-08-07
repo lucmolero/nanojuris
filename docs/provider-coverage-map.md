@@ -79,6 +79,9 @@ print([court.code for court in list_courts(source_system="esaj_cjsg")])
 
 ## Metodologia de pesquisa de fonte
 
+O fluxo operacional detalhado, com score de qualidade e comando `probe-rota`,
+esta em [route-mapping-playbook.md](route-mapping-playbook.md).
+
 Antes de implementar um provider, preencher uma ficha tecnica com:
 
 - URL inicial oficial;

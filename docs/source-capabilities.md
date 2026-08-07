@@ -185,13 +185,16 @@ Categoria: jurisprudencia de tribunal.
 Cobertura objetiva:
 
 - busca por inteiro teor, ementa, numero e periodo;
+- paginacao `trocaDePagina.do` apenas como continuacao de busca publica valida;
 - acordaos, monocraticas e homologacoes quando retornados pela fonte;
 - classe, assunto, relator, comarca, orgao julgador, data e URL de inteiro teor;
 - `get_document` com texto limpo de HTML publico, hash, tamanho, trace e
   metadados tecnicos;
 - diagnostico de retorno ao formulario, campos `recaptcha_response_token`,
-  `uuidCaptcha`, rota `captchaControleAcesso`, scripts de login e containers de
-  resultado;
+- `uuidCaptcha`, rota `captchaControleAcesso`, `emptySession.jsp`, scripts de
+  login e containers de resultado;
+- `get_document` marca redirecionamento para login/CAS como
+  `access_status=login_required`;
 - deteccao de captcha/controle de acesso sem bypass.
 
 ### `tjsp_esaj_cpopg`
@@ -307,6 +310,23 @@ Cobertura objetiva inicial:
 Estado atual: implementacao inicial. A busca live deve ser tratada como opt-in e
 validada por fixture antes de expandir inteiro teor.
 
+### `stj_informativo`
+
+Categoria: jurisprudencia de tribunal superior.
+
+Cobertura objetiva:
+
+- busca textual em notas oficiais do Informativo de Jurisprudencia do STJ;
+- numero do informativo, periodo, orgao julgador, processo citado, relator, data
+    de julgamento, titulo e resumo da nota;
+- rota publica validada sem cookies ou tokens para `infanticidio`;
+- canonicalizacao como `CanonicalDecision`, preservando `type="informativo"`.
+
+Estado atual: provider implementado com fixture offline para o Informativo n.
+507 e rota live reproduzida durante a descoberta. Links de acordaos podem
+depender do SCON e, se houver verificacao automatica, sao tratados como limite
+da fonte.
+
 ### `stf_juris`
 
 Categoria: jurisprudencia de tribunal superior.
@@ -323,3 +343,21 @@ Cobertura objetiva inicial:
 Estado atual: provider implementado por contrato HAR/fixture. A busca live deve
 ser tratada como opt-in, porque a conexao limpa deste ambiente recebeu AWS WAF
 HTTP 202 e a URL de inteiro teor retornou HTTP 403.
+
+### `stf_informativo`
+
+Categoria: jurisprudencia de tribunal superior.
+
+Cobertura objetiva:
+
+- download da planilha publica oficial `Dados_InformativosSTF.xlsx`;
+- filtro local por texto e numero de processo;
+- classe, numero, UF, relator, redator do acordao, orgao julgador, data,
+    titulo, tese, resumo, noticia, ramo do direito, materia, repercussao geral,
+    tema RG, legislacao, ODS e marcador Covid-19;
+- conversao de serial Excel para ISO date;
+- canonicalizacao como `CanonicalDecision`, preservando `type="informativo"`.
+
+Estado atual: provider implementado com parser XLSX por biblioteca padrao,
+fixture offline e contrato documentado. E a fonte preferencial para agentes de
+IA quando a pergunta exige tese/resumo oficial do STF e nao exige voto integral.

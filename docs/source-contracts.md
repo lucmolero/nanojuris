@@ -128,7 +128,9 @@ Cada dossie especifico deve seguir esta estrutura:
 
 Use `needs_deepening` do resumo como fila tecnica. Em geral, priorize:
 
-1. Fontes com alto valor juridico e risco alto, como `tjsp_cjsg` e `stj_scon`.
-2. Fontes boas para demonstracao e jurimetria, como `tjdf_juris` e `trf4_eproc_jurisprudencia`.
-3. Familias reutilizaveis, como CJSG/e-SAJ e eproc.
-4. Fontes especializadas, como NUGEP-NAC, TCE-SP, TRE-SP e Comunica PJe.
+1. Fontes superiores com conteudo curado e valido, como `stf_informativo` e
+   `stj_informativo`.
+2. Fontes com alto valor juridico e risco alto, como `tjsp_cjsg` e `stj_scon`.
+3. Fontes boas para demonstracao e jurimetria, como `tjdf_juris` e `trf4_eproc_jurisprudencia`.
+4. Familias reutilizaveis, como CJSG/e-SAJ e eproc.
+5. Fontes especializadas, como NUGEP-NAC, TCE-SP, TRE-SP e Comunica PJe.

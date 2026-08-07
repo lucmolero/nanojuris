@@ -61,7 +61,8 @@ O projeto nasce com os providers `bnp_pangea`, `comunica_pje`, `tjdf_juris`,
 `tjac_cjsg`, `tjac_esaj_cpopg`, `tjal_cjsg`, `tjam_cjsg`, `tjms_cjsg`, `stm_jurisprudencia`,
 `tjsp_cjsg`, `tjsp_eproc_jurisprudencia`, `tjsp_esaj_cpopg`,
 `tjsp_nugepnac`, `tce_sp_jurisprudencia`, `tre_sp_temas`,
-`trf4_eproc_jurisprudencia` e `stj_scon`. `bnp_pangea` consulta a API publica usada pelo
+`trf4_eproc_jurisprudencia`, `stf_informativo`, `stf_juris`,
+`stj_informativo` e `stj_scon`. `bnp_pangea` consulta a API publica usada pelo
 frontend do Banco Nacional de Precedentes/Pangea. `comunica_pje` consulta a API
 publica do Comunica PJe/DJEN para comunicacoes judiciais. `tjdf_juris` consulta
 a jurisprudencia publica do TJDFT/SISTJ. `tjac_cjsg`, `tjal_cjsg`, `tjam_cjsg` e
@@ -75,7 +76,13 @@ publica do eproc/TJSP. `tjsp_nugepnac` cobre IRDR/IAC oficiais do TJSP.
 publica do eproc/TRF4 e suporta inteiro teor publico. `tjsp_esaj_cpopg` consulta processo publico de primeiro grau
 por numero CNJ, nome da parte e OAB no e-SAJ/TJSP. `tjac_esaj_cpopg` consulta
 processo publico de primeiro grau por numero CNJ no e-SAJ/TJAC. `stm_jurisprudencia` consulta
-a jurisprudencia publica do STM/JMU e preserva a URL publica de inteiro teor. `stj_scon` inicia a cobertura STJ/SCON por acordaos
+a jurisprudencia publica do STM/JMU e preserva a URL publica de inteiro teor.
+`stf_informativo` consulta a planilha publica oficial do Informativo STF, com
+teses, resumos, materias, relator, orgao julgador e processo em dados
+estruturados. `stj_informativo` consulta o HTML publico do Informativo de
+Jurisprudencia do STJ para notas oficiais e julgados referenciados. `stf_juris`
+cobre a API JSON observada no frontend oficial do STF quando a fonte responde
+sem WAF. `stj_scon` inicia a cobertura STJ/SCON por acordaos
 com parser offline, capabilities declaradas e ficha publica em
 [docs/stj-source-profile.md](docs/stj-source-profile.md).
 
@@ -102,6 +109,8 @@ NanoJuris entrega:
 - provider TCE-SP para sumulas e boletins de jurisprudencia;
 - provider TRE-SP para temas selecionados de jurisprudencia eleitoral;
 - provider TRF4/eproc para jurisprudencia publica e inteiro teor;
+- provider STF Informativo para teses e resumos oficiais estruturados;
+- provider STJ Informativo para notas oficiais de jurisprudencia;
 - provider STJ/SCON inicial com parser offline de acordaos;
 - cliente Python simples;
 - CLI;
@@ -117,6 +126,8 @@ As capacidades declaradas por fonte estao documentadas em
 [docs/source-capabilities.md](docs/source-capabilities.md).
 O mapa de cobertura e oportunidades de providers brasileiros esta em
 [docs/provider-coverage-map.md](docs/provider-coverage-map.md).
+O playbook para mapear rotas publicas viaveis com score tecnico esta em
+[docs/route-mapping-playbook.md](docs/route-mapping-playbook.md).
 Os contratos reutilizaveis de aquisicao e parsing estao em
 [docs/extraction-pipeline.md](docs/extraction-pipeline.md).
 A estrategia SQLite-first com caminho futuro para PostgreSQL esta em
@@ -196,6 +207,7 @@ Fontes e capacidades:
 ```bash
 nanojuris fontes
 nanojuris diagnostico --fonte tjsp_cjsg
+nanojuris probe-rota "https://tribunal.exemplo.jus.br/jurisprudencia?q=idpj" --expect "Ementa"
 nanojuris buscar "infanticidio" --fonte comunica_pje --orgaos TJSP --limite 5
 nanojuris buscar "infanticidio" --fonte comunica_pje --publicacao-de 2026-07-31 --publicacao-ate 2026-07-31
 nanojuris buscar "infanticidio" --fonte tjdf_juris --limite 5
@@ -299,10 +311,12 @@ Recursos:
 
 - busca completa via formulario publico;
 - parser HTML de resultados;
+- paginacao segura quando a busca principal publica ja criou sessao valida;
 - extracao de numero do processo/recurso, relator, comarca, orgao julgador,
   classe, assunto e ementa;
 - identificadores `cdAcordao` e `cdForo`;
-- URL publica de inteiro teor quando disponivel;
+- URL publica de inteiro teor quando disponivel e status honesto quando
+  `getArquivo.do` redireciona para login;
 - deteccao de captcha/controle de acesso sem bypass.
 
 Exemplo:
@@ -311,7 +325,8 @@ Exemplo:
 nanojuris buscar "infanticidio" --fonte tjsp_cjsg --tipos acordao --limite 5
 ```
 
-Se o TJSP exigir captcha, o provider interrompe a operacao com erro claro.
+Se o TJSP exigir captcha, sessao ausente ou login, o provider interrompe a busca
+com erro claro ou marca o documento como `login_required`.
 
 ## Filosofia tecnica
 

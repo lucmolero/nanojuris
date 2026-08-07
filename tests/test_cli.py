@@ -5,6 +5,7 @@ from pathlib import Path
 
 from nanojuris.cli import main
 from nanojuris.models import CanonicalDecision, CanonicalDocument, CanonicalPrecedent, SearchPage
+from nanojuris.route_probe import RouteProbeResult
 from nanojuris.store import SQLiteStore
 
 
@@ -139,6 +140,46 @@ def test_cli_tribunais_filters_by_source_system(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert [court["code"] for court in payload] == ["TJAC", "TJAL", "TJAM", "TJMS", "TJSP"]
     assert payload[0]["source_system"] == "esaj_cjsg"
+
+
+def test_cli_probe_rota_outputs_route_diagnostic(monkeypatch, capsys):
+    calls = []
+
+    def fake_probe_route(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return RouteProbeResult(
+            ok=True,
+            route_status="live_valid",
+            quality_grade="A",
+            score=10,
+            url=url,
+            final_url=url,
+            status_code=200,
+        )
+
+    monkeypatch.setattr("nanojuris.cli.probe_route", fake_probe_route)
+
+    exit_code = main(
+        [
+            "probe-rota",
+            "https://example.test/juris",
+            "--metodo",
+            "POST",
+            "--expect",
+            "IDPJ",
+            "--data",
+            "q=idpj",
+        ]
+    )
+
+    assert exit_code == 0
+    assert calls[0]["url"] == "https://example.test/juris"
+    assert calls[0]["method"] == "POST"
+    assert calls[0]["expected_texts"] == ["IDPJ"]
+    assert calls[0]["data"] == {"q": "idpj"}
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["route_status"] == "live_valid"
+    assert payload["quality_grade"] == "A"
 
 
 def test_cli_contratos_outputs_source_contracts(capsys):

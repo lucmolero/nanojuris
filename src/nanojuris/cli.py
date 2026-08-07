@@ -18,6 +18,7 @@ from nanojuris.exporters import (
     to_csv,
     to_jsonl,
 )
+from nanojuris.route_probe import parse_json_object, parse_key_value_pairs, probe_route
 from nanojuris.source_contracts import summarize_contracts
 from nanojuris.store import SQLiteStore
 
@@ -127,6 +128,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--implementados",
         action="store_true",
         help="Listar apenas tribunais com provider implementado",
+    )
+
+    probe_rota = sub.add_parser(
+        "probe-rota",
+        help="Avaliar uma rota publica candidata antes de implementar provider",
+    )
+    probe_rota.add_argument("url", help="URL publica absoluta")
+    probe_rota.add_argument("--metodo", choices=["GET", "POST"], default="GET")
+    probe_rota.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        help="Texto esperado na resposta. Pode ser repetido.",
+    )
+    probe_rota.add_argument(
+        "--data",
+        action="append",
+        default=[],
+        metavar="CHAVE=VALOR",
+        help="Campo de formulario para POST. Pode ser repetido.",
+    )
+    probe_rota.add_argument(
+        "--json",
+        default="",
+        help='Payload JSON como objeto. Ex.: \'{"q":"idpj"}\'',
+    )
+    probe_rota.add_argument("--timeout", type=float, default=30.0)
+    probe_rota.add_argument(
+        "--sem-verificar-ssl",
+        action="store_true",
+        help="Desabilitar verificacao SSL apenas para diagnostico local.",
     )
 
     store = sub.add_parser("store", help="Consultar um store SQLite local")
@@ -335,6 +367,20 @@ def main(argv: list[str] | None = None) -> int:
                 json.dumps([court.to_dict() for court in court_rows], ensure_ascii=False, indent=2)
             )
             return 0
+
+        if args.command == "probe-rota":
+            result = probe_route(
+                args.url,
+                method=args.metodo,
+                expected_texts=args.expect,
+                timeout=args.timeout,
+                user_agent=client.config.user_agent,
+                data=parse_key_value_pairs(args.data),
+                json_payload=parse_json_object(args.json) if args.json else None,
+                verify_ssl=not args.sem_verificar_ssl,
+            )
+            print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+            return 0 if result.ok else 2
 
         if args.command == "store":
             with SQLiteStore(args.db) as store:

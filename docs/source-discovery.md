@@ -13,7 +13,7 @@ copie fluxos de captcha, login, cookie ou browser stealth. A ficha
 
 1. Registrar a entrada feita no navegador: URL inicial, numero/termo pesquisado,
    tribunal, sistema e resultado esperado.
-2. Testar a mesma rota com `examples/source_route_probe.py`, sem cookies,
+2. Testar a mesma rota com `nanojuris probe-rota`, sem cookies,
    cabecalhos privados, HAR, token, captcha solving ou sessao exportada.
 3. Confirmar os sinais objetivos:
    - HTTP 200 ou redirect oficial esperado;
@@ -42,16 +42,20 @@ ter parser de HTML salvo legitimamente, mas nao deve automatizar bypass.
 ## Exemplo
 
 ```bash
-python examples/source_route_probe.py \
+nanojuris probe-rota \
   "https://esaj.tjsp.jus.br/cpopg/search.do?cbPesquisa=NUMPROC&numeroDigitoAnoUnificado=0003938-14.2017&foroNumeroUnificado=0323&dadosConsulta.valorConsultaNuUnificado=0003938-14.2017.8.26.0323&dadosConsulta.valorConsulta=0003938-14.2017.8.26.0323&dadosConsulta.tipoNuProcesso=UNIFICADO" \
   --expect "0003938-14.2017.8.26.0323" \
   --expect "Ação Penal"
 ```
 
 Saida esperada: JSON com status, URL final, tamanho, hash, titulo, sinais de
-acesso, `route_status` e presenca dos textos esperados. Se o texto esperado
-aparecer apenas em formulario ou pagina com captcha/login/recaptcha, o probe deve
-retornar `ok: false` e `route_status: access_control_or_login`.
+acesso, sinais juridicos, score, `quality_grade`, `route_status` e presenca dos
+textos esperados. Se o texto esperado aparecer apenas em formulario ou pagina com
+captcha/login/recaptcha, o probe deve retornar `ok: false` e
+`route_status: access_control_or_login`.
+
+O playbook completo de priorizacao, score e promocao de rotas esta em
+[route-mapping-playbook.md](route-mapping-playbook.md).
 
 ## Registro de descoberta: 2026-08-02
 
