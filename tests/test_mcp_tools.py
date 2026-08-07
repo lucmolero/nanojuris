@@ -11,6 +11,7 @@ from nanojuris.mcp_tools import (
     list_sources_tool,
     search_jurisprudence_tool,
     search_unified_tool,
+    source_contracts_tool,
     source_diagnostics_tool,
     store_export_run_tool,
     store_get_tool,
@@ -215,6 +216,22 @@ def test_source_diagnostics_tool_returns_one_source():
 
     assert payload["source"] == "fake"
     assert payload["capabilities"]["display_name"] == "Fonte Fake"
+
+
+def test_source_contracts_tool_returns_contract_maturity():
+    payload = source_contracts_tool(client=_client())
+
+    assert payload["summary"]["total_sources"] == 1
+    assert payload["contracts"][0]["source"] == "fake"
+    assert payload["contracts"][0]["contract_level"] >= 1
+    assert "next_steps" in payload["contracts"][0]
+
+
+def test_source_contracts_tool_filters_one_source():
+    payload = source_contracts_tool("fake", client=_client())
+
+    assert payload["summary"]["total_sources"] == 1
+    assert [contract["source"] for contract in payload["contracts"]] == ["fake"]
 
 
 def test_search_jurisprudence_tool_returns_canonical_records_and_limits_page_size():

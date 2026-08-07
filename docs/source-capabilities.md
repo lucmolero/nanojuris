@@ -9,6 +9,8 @@ status de acesso e limites. Ela nao interpreta merito juridico.
 
 Para priorizacao nacional por familia de sistema e tribunal, veja
 [provider-coverage-map.md](provider-coverage-map.md).
+Para maturidade, lacunas e dossies tecnicos por provider, veja
+[source-contracts.md](source-contracts.md).
 
 ## Por que existe
 
@@ -74,6 +76,14 @@ Diagnostico de capacidades e limites:
 
 ```bash
 nanojuris diagnostico --fonte bnp_pangea
+```
+
+Auditoria de contratos, maturidade e lacunas:
+
+```bash
+nanojuris contratos
+nanojuris contratos --fonte tjdf_juris
+nanojuris contratos --resumo
 ```
 
 ## Campos declarados

@@ -48,6 +48,7 @@ def test_create_server_registers_expected_tools(monkeypatch):
         "list_sources",
         "search_jurisprudence",
         "search_unified",
+        "source_contracts",
         "source_diagnostics",
         "store_export_run",
         "store_get",
@@ -78,6 +79,11 @@ def test_create_server_tools_delegate_to_tool_layer(monkeypatch):
         "source_diagnostics_tool",
         lambda source: {"source": source},
     )
+    monkeypatch.setattr(
+        mcp_server,
+        "source_contracts_tool",
+        lambda source="": {"source": source, "contracts": []},
+    )
 
     def fake_search_tool(text, **kwargs):
         calls.append(("search", text, kwargs))
@@ -97,6 +103,10 @@ def test_create_server_tools_delegate_to_tool_layer(monkeypatch):
         "courts": [{"branch": "state", "state": "SP", "source_system": None, "implemented": None}]
     }
     assert server.tools["source_diagnostics"]("tjsp_cjsg") == {"source": "tjsp_cjsg"}
+    assert server.tools["source_contracts"]("tjdf_juris") == {
+        "source": "tjdf_juris",
+        "contracts": [],
+    }
     assert (
         server.tools["search_jurisprudence"](
             "icms",

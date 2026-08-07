@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+import unicodedata
 from typing import Any
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -409,11 +410,26 @@ def _looks_like_access_control(html: str) -> bool:
 
 def _looks_like_empty_result(soup: BeautifulSoup) -> bool:
     text = soup.get_text(" ", strip=True).lower()
+    normalized_text = _strip_accents(text)
+    markers = [
+        "nao foram encontrados",
+        "nenhum resultado",
+        "nenhum registro",
+        "sua pesquisa nao encontrou",
+        "nao ha resultados",
+    ]
+    if any(marker in normalized_text for marker in markers):
+        return True
     return "não foram encontrados" in text or "nao foram encontrados" in text
 
 
 def _clean_label(value: str) -> str:
     return _clean_text(value).rstrip(":").lower()
+
+
+def _strip_accents(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(char for char in normalized if not unicodedata.combining(char))
 
 
 def _clean_text(value: str) -> str:

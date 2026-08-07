@@ -73,6 +73,21 @@ escolher provider, filtro de busca ou estrategia de coleta.
 Retorna `ProviderCapabilities` de uma fonte especifica, com limitacoes e status
 de acesso possiveis.
 
+### `source_contracts`
+
+Retorna maturidade, lacunas, proximos passos e recomendacao MCP de uma ou todas
+as fontes.
+
+Parametros:
+
+- `source`: opcional; quando vazio, retorna todos os providers.
+
+Uso esperado:
+
+- agente decide se uma fonte esta madura antes de consulta-la;
+- mantenedor identifica `needs_deepening`;
+- documentacao e roadmap usam o mesmo inventario declarado pelo codigo.
+
 ### `search_jurisprudence`
 
 Executa busca paginada em uma fonte e retorna resultados normalizados.
@@ -116,6 +131,20 @@ Parametros principais:
 A resposta inclui `sources`, `total_returned`, `results` e `errors`. Isso permite
 que agentes consultem varias fontes em uma chamada sem perder diagnosticos de
 captcha, indisponibilidade ou mudanca de contrato de parser em uma fonte isolada.
+
+Para uso por agentes, a resposta tambem separa roteamento semantico:
+
+- `searched_sources`: fontes efetivamente consultadas;
+- `skipped_sources`: fontes nao chamadas porque nao se aplicam ao tipo de
+  pergunta, com `reason` e `message` explicitos;
+- `errors`: fontes chamadas que falharam por indisponibilidade, captcha,
+  controle de acesso ou mudanca de contrato.
+
+Essa separacao evita falso diagnostico. Uma fonte `case_lookup`, por exemplo,
+nao deve ser tratada como quebrada quando o usuario pergunta por uma tese
+jurisprudencial livre como `idpj`; ela exige numero CNJ, parte, documento, OAB
+ou outro identificador. Do mesmo modo, uma fonte de `judicial_communications`
+retorna comunicacoes/intimacoes, nao julgados para estudo jurimetrico.
 
 ### `export_results`
 

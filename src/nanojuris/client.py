@@ -38,6 +38,12 @@ from nanojuris.providers.tjsp_esaj_cpopg import TjspEsajCpopgProvider
 from nanojuris.providers.tjsp_nugepnac import TjspNugepnacProvider
 from nanojuris.providers.tre_sp_temas import TreSpTemasProvider
 from nanojuris.providers.trf4_eproc_jurisprudencia import Trf4EprocJurisprudenciaProvider
+from nanojuris.routing import route_unified_sources
+from nanojuris.source_contracts import (
+    SourceContractAssessment,
+    assess_source_contract,
+    assess_source_contracts,
+)
 from nanojuris.store import ResearchRun, SQLiteStore
 
 CanonicalSearchRecord = CanonicalDecision | CanonicalPrecedent
@@ -160,10 +166,26 @@ class NanoJurisClient:
     ) -> dict[str, Any]:
         """Search multiple jurisprudence sources and return one aggregated payload."""
 
-        selected_sources = sources or self._default_unified_sources()
+        selected_sources = list(sources) if sources is not None else self._default_unified_sources()
+        capabilities = {item.source: item for item in self.list_sources()}
+        routing = route_unified_sources(
+            selected_sources=selected_sources,
+            capabilities=capabilities,
+            text=text,
+            filters={
+                "number": filters.get("number"),
+                "party_name": filters.get("party_name") or filters.get("parte"),
+                "party_document": filters.get("party_document"),
+                "lawyer_name": filters.get("lawyer_name") or filters.get("advogado"),
+                "oab": filters.get("oab"),
+                "precatory_number": filters.get("precatory_number"),
+                "police_document": filters.get("police_document"),
+                "cda": filters.get("cda"),
+            },
+        )
         results: list[UnifiedSearchRecord] = []
         errors: list[dict[str, str]] = []
-        for source in selected_sources:
+        for source in routing.searched:
             try:
                 if canonical:
                     results.extend(
@@ -191,15 +213,11 @@ class NanoJurisClient:
             except Exception as exc:
                 if not continue_on_error:
                     raise
-                errors.append(
-                    {
-                        "source": source,
-                        "error_type": type(exc).__name__,
-                        "message": str(exc),
-                    }
-                )
+                errors.append(_source_error(source, exc))
         return {
             "sources": selected_sources,
+            "searched_sources": routing.searched,
+            "skipped_sources": [skip.to_dict() for skip in routing.skipped],
             "page": page,
             "page_size": page_size,
             "canonical": canonical,
@@ -318,6 +336,16 @@ class NanoJurisClient:
 
         return [self.providers[name].get_capabilities() for name in sorted(self.providers)]
 
+    def get_source_contract(self, *, source: str) -> SourceContractAssessment:
+        """Return a maturity assessment for one provider contract."""
+
+        return assess_source_contract(self.get_capabilities(source=source))
+
+    def list_source_contracts(self) -> list[SourceContractAssessment]:
+        """Return maturity assessments for all registered provider contracts."""
+
+        return assess_source_contracts(self.list_sources())
+
     def list_suggestions(self, text: str, *, source: str = "bnp_pangea") -> list[str]:
         """Return provider search suggestions when supported."""
 
@@ -342,3 +370,11 @@ class NanoJurisClient:
             raise UnsupportedProviderError(
                 f"Provider {source!r} is not registered. Available: {available}"
             ) from exc
+
+
+def _source_error(source: str, exc: Exception) -> dict[str, str]:
+    return {
+        "source": source,
+        "error_type": type(exc).__name__,
+        "message": str(exc),
+    }

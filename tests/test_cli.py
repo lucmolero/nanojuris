@@ -141,6 +141,26 @@ def test_cli_tribunais_filters_by_source_system(capsys):
     assert payload[0]["source_system"] == "esaj_cjsg"
 
 
+def test_cli_contratos_outputs_source_contracts(capsys):
+    exit_code = main(["contratos", "--fonte", "tjdf_juris"])
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["summary"]["total_sources"] == 1
+    assert payload["contracts"][0]["source"] == "tjdf_juris"
+    assert payload["contracts"][0]["contract_level"] == 5
+
+
+def test_cli_contratos_resumo_outputs_maturity_summary(capsys):
+    exit_code = main(["contratos", "--resumo"])
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["total_sources"] >= 1
+    assert "needs_deepening" in payload
+    assert "ready_for_agents" in payload
+
+
 def test_cli_buscar_passes_number_filter(monkeypatch, capsys):
     calls = []
 

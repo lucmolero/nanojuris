@@ -93,6 +93,18 @@ def test_parse_stm_jurisprudencia_results_extracts_panel_fields():
     )
 
 
+def test_parse_stm_jurisprudencia_results_accepts_empty_result_page():
+    html = "<html><body><main>Nenhum resultado encontrado.</main></body></html>"
+
+    results = parse_stm_jurisprudencia_results(
+        html,
+        trace=SourceTrace(provider="stm_jurisprudencia", endpoint="/consulta.php"),
+        source_url="https://jurisprudencia.stm.jus.br/consulta.php",
+    )
+
+    assert results == []
+
+
 def test_provider_search_gets_stm_query_and_parses_results():
     session = FakeSession([FakeResponse(STM_HTML)])
     provider = StmJurisprudenciaProvider(NanoJurisConfig(rate_limit_interval=0), session=session)

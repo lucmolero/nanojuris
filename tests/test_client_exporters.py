@@ -121,6 +121,58 @@ class FailingProvider:
         )
 
 
+class CaseLookupProvider:
+    name = "case_lookup"
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        return SearchPage(
+            source="case_lookup",
+            total=1,
+            start=1,
+            end=1,
+            page=query.page,
+            page_size=query.page_size,
+            results=[
+                JurisprudenceResult(
+                    id="case-1",
+                    source="case_lookup",
+                    court="TJSP",
+                    type="processo",
+                    number=query.number,
+                )
+            ],
+        )
+
+    def get_capabilities(self):
+        return ProviderCapabilities(
+            source="case_lookup",
+            display_name="Consulta Processual",
+            source_url="https://example.test/case",
+            category="case_lookup",
+            search_modes=["case_number"],
+            canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
+        )
+
+
+class CommunicationsProvider:
+    name = "communications"
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        raise AssertionError("communications should be skipped for jurisprudence search")
+
+    def get_capabilities(self):
+        return ProviderCapabilities(
+            source="communications",
+            display_name="Comunicacoes Judiciais",
+            source_url="https://example.test/communications",
+            category="judicial_communications",
+            search_modes=["text"],
+            canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
+        )
+
+
 def test_client_builds_query_for_provider():
     provider = FakeProvider()
     client = NanoJurisClient(providers=[provider])
@@ -165,6 +217,56 @@ def test_client_search_many_unifies_results_and_keeps_source_errors():
             "message": "fonte indisponivel",
         }
     ]
+
+
+def test_client_search_many_reports_skipped_sources_by_semantic_reason():
+    client = NanoJurisClient(
+        providers=[FakeProvider(), CaseLookupProvider(), CommunicationsProvider()]
+    )
+
+    payload = client.search_many(
+        "idpj",
+        sources=["fake", "case_lookup", "communications"],
+    )
+
+    assert payload["sources"] == ["fake", "case_lookup", "communications"]
+    assert payload["searched_sources"] == ["fake"]
+    assert payload["total_returned"] == 1
+    assert payload["skipped_sources"] == [
+        {
+            "source": "case_lookup",
+            "category": "case_lookup",
+            "reason": "case_lookup_requires_identifier",
+            "message": (
+                "Consulta processual exige numero CNJ, parte, documento, OAB "
+                "ou outro identificador; nao e uma busca textual de jurisprudencia."
+            ),
+        },
+        {
+            "source": "communications",
+            "category": "judicial_communications",
+            "reason": "not_jurisprudence_source",
+            "message": (
+                "A fonte retorna comunicacoes/intimacoes judiciais, nao julgados "
+                "de jurisprudencia para estudo jurimetrico."
+            ),
+        },
+    ]
+
+
+def test_client_search_many_allows_case_lookup_when_identifier_is_present():
+    client = NanoJurisClient(providers=[FakeProvider(), CaseLookupProvider()])
+
+    payload = client.search_many(
+        "0003938-14.2017.8.26.0323",
+        sources=["fake", "case_lookup"],
+        number="0003938-14.2017.8.26.0323",
+        canonical=False,
+    )
+
+    assert payload["searched_sources"] == ["fake", "case_lookup"]
+    assert payload["skipped_sources"] == []
+    assert payload["total_returned"] == 2
 
 
 def test_client_search_and_store_run_returns_saved_run():

@@ -18,6 +18,7 @@ from nanojuris.exporters import (
     to_csv,
     to_jsonl,
 )
+from nanojuris.source_contracts import summarize_contracts
 from nanojuris.store import SQLiteStore
 
 
@@ -102,6 +103,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exibir diagnostico de capacidades e limites de uma fonte",
     )
     diagnostico.add_argument("--fonte", default="bnp_pangea")
+
+    contratos = sub.add_parser(
+        "contratos",
+        help="Auditar maturidade, lacunas e proximos passos dos providers",
+    )
+    contratos.add_argument("--fonte", default="", help="Detalhar apenas um provider")
+    contratos.add_argument(
+        "--resumo",
+        action="store_true",
+        help="Exibir apenas resumo de maturidade e riscos",
+    )
 
     tribunais = sub.add_parser("tribunais", help="Listar tribunais brasileiros conhecidos")
     tribunais.add_argument("--ramo", default="", help="Filtrar por ramo: state, federal, labor")
@@ -293,6 +305,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "diagnostico":
             capability = client.get_capabilities(source=args.fonte)
             print(json.dumps(capability.to_dict(), ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "contratos":
+            contracts = (
+                [client.get_source_contract(source=args.fonte)]
+                if args.fonte
+                else client.list_source_contracts()
+            )
+            payload: Any = (
+                summarize_contracts(contracts)
+                if args.resumo
+                else {
+                    "summary": summarize_contracts(contracts),
+                    "contracts": [contract.to_dict() for contract in contracts],
+                }
+            )
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "tribunais":

@@ -13,6 +13,7 @@ from nanojuris.mcp_tools import (
     list_sources_tool,
     search_jurisprudence_tool,
     search_unified_tool,
+    source_contracts_tool,
     source_diagnostics_tool,
     store_export_run_tool,
     store_get_tool,
@@ -75,6 +76,12 @@ def create_server() -> Any:
         """Return source capabilities, limits and responsible-use notes."""
 
         return source_diagnostics_tool(source)
+
+    @server.tool()
+    def source_contracts(source: str = "") -> dict[str, Any]:
+        """Return source contract maturity, gaps and deepening steps."""
+
+        return source_contracts_tool(source)
 
     @server.tool()
     def search_jurisprudence(

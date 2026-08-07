@@ -15,6 +15,7 @@ from nanojuris.exporters import (
     to_csv,
     to_jsonl,
 )
+from nanojuris.source_contracts import summarize_contracts
 from nanojuris.store import SQLiteStore, StoredRecordKind
 
 MAX_MCP_PAGE_SIZE = 50
@@ -58,6 +59,25 @@ def source_diagnostics_tool(
     return {
         "source": source,
         "capabilities": _to_jsonable(active_client.get_capabilities(source=source)),
+    }
+
+
+def source_contracts_tool(
+    source: str = "",
+    *,
+    client: NanoJurisClient | None = None,
+) -> dict[str, Any]:
+    """Return maturity, gaps and recommended deepening steps for provider contracts."""
+
+    active_client = client or NanoJurisClient()
+    contracts = (
+        [active_client.get_source_contract(source=source)]
+        if source
+        else active_client.list_source_contracts()
+    )
+    return {
+        "summary": _to_jsonable(summarize_contracts(contracts)),
+        "contracts": [_to_jsonable(contract) for contract in contracts],
     }
 
 

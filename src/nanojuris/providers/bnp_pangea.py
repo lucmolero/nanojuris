@@ -276,7 +276,9 @@ class BnpPangeaProvider(JurisprudenceProvider):
             payload = kwargs.get("json") or kwargs.get("params") or {}
             raise SourceUnavailableError(
                 f"BNP rejected request with HTTP {response.status_code}"
-                f"; response={detail!r}; payload={payload!r}"
+                f"; response={detail!r}; payload={payload!r}; "
+                "hint=try a longer legal expression, precedent species, court filters, "
+                "or the dedicated suggestions/catalog endpoints"
             )
 
         try:

@@ -37,14 +37,24 @@ from nanojuris.models import (
     SearchPage,
     SourceTrace,
 )
+from nanojuris.source_contracts import (
+    SourceContractAssessment,
+    assess_source_contract,
+    assess_source_contracts,
+    contracts_payload,
+    summarize_contracts,
+)
 from nanojuris.store import CanonicalStore, ResearchRun, SQLiteStore, StoreStats
 
 __all__ = [
     "AccessStatus",
+    "assess_source_contract",
+    "assess_source_contracts",
     "CanonicalDecision",
     "CanonicalDocument",
     "CanonicalPrecedent",
     "CanonicalStore",
+    "contracts_payload",
     "COURTS",
     "CourtBranch",
     "CourtInfo",
@@ -74,8 +84,10 @@ __all__ = [
     "search_page_to_canonical",
     "SourceTrace",
     "SourceSystem",
+    "SourceContractAssessment",
     "SQLiteStore",
     "StoreStats",
+    "summarize_contracts",
 ]
 
 __version__ = "0.1.0"
