@@ -18,7 +18,7 @@ O fluxo recomendado e:
 4. Reproduzir a rota com `nanojuris probe-rota`.
 5. Classificar a rota por score.
 6. Criar ficha de contrato em `docs/source-contracts/`.
-7. Salvar fixture offline sanitizada.
+7. Salvar fixture offline publica representativa.
 8. Implementar parser offline.
 9. Implementar provider com diagnostics e testes.
 
@@ -143,7 +143,8 @@ Antes de abrir PR de provider:
 
 - `probe-rota` mostra `live_valid` ou uma justificativa tecnica clara;
 - contrato documenta endpoint, metodo, payload, paginacao e campos;
-- fixture offline contem conteudo publico e sanitizado;
+- fixture offline contem conteudo publico representativo, sem cookies, tokens ou
+  segredos locais de navegador;
 - parser offline cobre resultado vazio, resultado valido e mudanca de contrato;
 - provider declara capabilities e responsible use;
 - testes nao dependem de rede por padrao;

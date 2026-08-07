@@ -25,7 +25,7 @@ A ficha de fonte deve registrar:
 - campos juridicos objetivos disponiveis;
 - tipos documentais;
 - status de acesso esperado;
-- exemplos publicos sanitizados;
+- exemplos publicos representativos;
 - limites de uso responsavel;
 - riscos conhecidos: captcha, instabilidade, rate limit, mudanca frequente.
 
@@ -130,7 +130,7 @@ deve ser declarado ao usuario.
 
 Cada provider novo deve incluir:
 
-- fixture offline sanitizada;
+- fixture offline publica representativa;
 - teste de parser;
 - teste de busca com cliente fake ou resposta mockada;
 - teste de `get_capabilities`;
@@ -154,7 +154,7 @@ Um provider so deve entrar no core quando:
 - declara capabilities completas;
 - documenta fonte, parametros e limitacoes;
 - nao faz bypass;
-- inclui fixtures sanitizadas;
+- inclui fixtures publicas representativas;
 - retorna erros acionaveis;
 - preserva `SourceTrace`;
 - gera modelos canonicos quando houver mapeamento confiavel;

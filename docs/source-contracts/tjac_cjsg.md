@@ -37,7 +37,7 @@
 
 ## Decisao
 - Promover TJAC/CJSG como fonte forte para endurecer a familia e-SAJ.
-- Criar fixture sanitizada antes de ampliar fetcher live.
+- Criar fixture publica representativa antes de ampliar fetcher live.
 - Nao usar rotas de captcha ou controle de acesso para bypass.
 
 ## MCP e agentes

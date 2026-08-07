@@ -273,6 +273,6 @@ ao core dos providers.
 
 Nao copiar fluxos de captcha solving, OCR de captcha, audio captcha ou Selenium
 usado para passar por validacao humana. O uso adequado de `courtsbr` dentro da
-NanoJuris e como inteligencia de fonte, fixture offline sanitizada e mapa de
+NanoJuris e como inteligencia de fonte, fixture offline publica representativa e mapa de
 contratos historicos. Providers live so devem nascer depois de reproducao com
 sessao HTTP limpa.

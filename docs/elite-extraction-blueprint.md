@@ -34,7 +34,7 @@ Toda evolucao do NanoJuris deve preservar estes criterios publicos:
 - extracao objetiva de dados, sem interpretacao juridica ou recomendacao;
 - rastreabilidade por `SourceTrace` e `ExtractionTrace` sempre que houver coleta
   ou parsing;
-- fixtures sanitizadas e testes offline para cada provider;
+- fixtures publicas representativas e testes offline para cada provider;
 - testes live apenas opt-in;
 - deteccao explicita de captcha, login, segredo de justica e controle de acesso,
   sem bypass;
@@ -213,7 +213,7 @@ e acompanhadas de traces.
 Uma fonte so deve ser considerada suportada quando entregar:
 
 - provider documentado;
-- fixtures offline sanitizadas;
+- fixtures offline publicas representativas;
 - teste unitario de parser;
 - teste de contrato do modelo canonico;
 - teste live opcional;

@@ -58,7 +58,7 @@
             "orgao_julgador": "Segunda Turma",
             "julgamento_data": "2025-05-01",
             "publicacao_data": "2025-05-08",
-            "ementa_texto": "Habeas corpus. Direito penal. Exemplo sanitizado.",
+            "ementa_texto": "Habeas corpus. Direito penal. Exemplo publico representativo.",
             "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=500000"
           }
         }
@@ -75,5 +75,5 @@
       }
     }
   },
-  "search_id": "sanitized-search-id"
+  "search_id": "public-representative-search-id"
 }

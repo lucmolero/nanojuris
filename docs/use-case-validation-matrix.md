@@ -387,7 +387,7 @@ Backlog sugerido:
 - `docs/provider-development.md`;
 - `examples/custom_provider.py`;
 - interface de plugin via entrypoints;
-- CI check para fixtures sanitizadas.
+- CI check para fixtures publicas representativas.
 
 ## UC-06: usuario diagnostica fonte instavel ou bloqueada
 
@@ -630,7 +630,7 @@ Fluxo desejado:
 
 Ferramentas envolvidas:
 
-- fixtures sanitizadas;
+- fixtures publicas representativas;
 - parsers versionados;
 - `ExtractionStatus`;
 - `ProviderCapabilities`;
@@ -749,7 +749,7 @@ Criterio de pronto:
 Para cada caso antes de marcar como implementado:
 
 - existe teste offline?
-- existe fixture sanitizada quando depende de fonte?
+- existe fixture publica representativa quando depende de fonte?
 - existe erro claro para acesso bloqueado?
 - existe trace de fonte?
 - existe trace de extracao quando ha parsing?

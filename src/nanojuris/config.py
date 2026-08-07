@@ -28,7 +28,10 @@ class NanoJurisConfig:
     tre_sp_url: str = "https://www.tre-sp.jus.br"
     tjsp_url: str = "https://www.tjsp.jus.br"
     tjdf_juris_url: str = "https://pesquisajuris.tjdft.jus.br"
+    tnu_eproc_jurisprudencia_url: str = "https://eproctnu.cjf.jus.br/eproc"
+    trf2_eproc_jurisprudencia_url: str = "https://eproc.trf2.jus.br/eproc"
     trf4_eproc_jurisprudencia_url: str = "https://jurisprudencia.trf4.jus.br/eproc2trf4"
+    trf6_eproc_jurisprudencia_url: str = "https://eproc-jur.trf6.jus.br/eproc"
     tjac_cjsg_url: str = "https://esaj.tjac.jus.br/cjsg"
     tjac_esaj_url: str = "https://esaj.tjac.jus.br"
     tjal_cjsg_url: str = "https://www2.tjal.jus.br/cjsg"
@@ -37,4 +40,6 @@ class NanoJurisConfig:
     tjsp_esaj_url: str = "https://esaj.tjsp.jus.br"
     tjsp_cjsg_url: str = "https://esaj.tjsp.jus.br/cjsg"
     tjsp_eproc_url: str = "https://eproc-consulta.tjsp.jus.br/consulta_1g"
+    tjgo_projudi_url: str = "https://projudi.tjgo.jus.br"
+    tjpi_juspi_url: str = "https://jurisprudencia.tjpi.jus.br"
     rate_limit_interval: float = 0.0

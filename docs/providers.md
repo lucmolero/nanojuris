@@ -385,6 +385,114 @@ Na descoberta limpa, o TJMS/CJSG retornou `22` resultados para `infanticidio`,
 sem captcha no fluxo testado, e o parser CJSG leu classe, assunto, comarca,
 relator, orgao julgador, datas, ementa e link de inteiro teor.
 
+## `tjpi_juspi`
+
+Provider para jurisprudencia publica do TJPI/JusPI.
+
+Rotas publicas usadas:
+
+```text
+GET /jurisprudences/search?q=<termo>
+GET /jurisprudences/search?page=<n>&q=<termo>
+GET /jurisprudences/<id>/public
+```
+
+Campos enviados:
+
+```text
+q
+page
+tipo
+relator
+classe
+orgao
+data_min
+data_max
+```
+
+Campos extraidos:
+
+```text
+public_id
+case_number
+decision_type
+subject
+case_class
+rapporteur
+judging_body
+publication_date
+summary
+document_url
+full_text
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "dano moral" --fonte tjpi_juspi --limite 5
+nanojuris documento "tjpi-juspi-35510999" --fonte tjpi_juspi
+```
+
+Na descoberta limpa, o TJPI/JusPI retornou HTML publico por GET simples, com
+resultados decisorios reais, paginacao e links de detalhe em
+`/jurisprudences/<id>/public`. O provider normaliza resultados para
+`CanonicalDecision` e o detalhe publico para `CanonicalDocument`, sem baixar PDF
+e sem usar sessao autenticada.
+
+## `tjgo_projudi_jurisprudencia`
+
+Provider para jurisprudencia publica do PROJUDI/TJGO.
+
+Rotas publicas usadas:
+
+```text
+GET  /ConsultaJurisprudencia
+POST /ConsultaJurisprudencia
+```
+
+Payload minimo validado:
+
+```text
+PaginaAtual
+PosicaoPaginaAtual
+Texto
+Id_Instancia
+Id_Area
+Id_ServentiaSubTipo
+ProcessoNumero
+DataInicial
+DataFinal
+Localizar=Consultar
+```
+
+Campos extraidos:
+
+```text
+case_number
+decision_type
+rapporteur
+judging_body
+publication_date
+summary
+full_text
+file_id
+```
+
+Exemplo validado:
+
+```bash
+nanojuris buscar "dano moral" --fonte tjgo_projudi_jurisprudencia --limite 5
+```
+
+Na descoberta limpa, o TJGO/Projudi retornou HTML publico por POST, com mais de
+1,3 milhao de resultados para `dano moral`, cards `div.search-result`, numero
+CNJ, magistrado, orgao/unidade, tipo de ato, data de publicacao e inteiro teor
+embutido no proprio resultado. O provider preserva o texto publico retornado
+pela fonte sem redaction automatica.
+
+A rota separada de download por `Id_Arquivo` voltou ao formulario em probe sem
+token, por isso permanece pendente e nao e usada pelo provider atual.
+
 ## `stm_jurisprudencia`
 
 Provider para jurisprudencia publica do STM/JMU, descoberto por probe limpo no
@@ -486,6 +594,59 @@ Na descoberta limpa, o eproc/TRF4 retornou HTML publico sem captcha, com cards
 `.resultadoItem`, numero CNJ, classe, orgao julgador, relator, datas, trecho de
 decisao e link de inteiro teor. A rota de download do inteiro teor retornou HTML
 publico validado, entao o provider declara suporte a `get_document`.
+
+## `tnu_eproc_jurisprudencia`, `trf2_eproc_jurisprudencia`, `trf6_eproc_jurisprudencia`
+
+Providers para jurisprudencia publica federal em instancias eproc da TNU, TRF2
+e TRF6. Eles compartilham a mesma familia tecnica e o mesmo parser de cards
+HTML usado pelo eproc, mas expõem fontes separadas para facilitar roteamento por
+MCP, CLI e estudos jurimetricos.
+
+Rotas publicas usadas:
+
+```text
+POST /externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados
+GET  /externo_controlador.php?acao=jurisprudencia@jurisprudencia/download_inteiro_teor&id_jurisprudencia=<id>
+```
+
+Bases:
+
+```text
+TNU  https://eproctnu.cjf.jus.br/eproc
+TRF2 https://eproc.trf2.jus.br/eproc
+TRF6 https://eproc-jur.trf6.jus.br/eproc
+```
+
+Campos extraidos:
+
+```text
+case_number
+decision_type
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+document_url
+full_text_url
+id_jurisprudencia
+```
+
+Exemplos:
+
+```bash
+nanojuris buscar "aposentadoria" --fonte tnu_eproc_jurisprudencia --limite 5
+nanojuris buscar "aposentadoria" --fonte trf2_eproc_jurisprudencia --limite 5
+nanojuris buscar "aposentadoria" --fonte trf6_eproc_jurisprudencia --limite 5
+```
+
+Na validacao live de 2026-08-07, as tres fontes responderam HTTP 200, sem
+captcha/login, com `resultadoItem`, numero CNJ, ementa/decisao e link de inteiro
+teor. As fixtures publicas representativas ficam em
+`tests/fixtures/tnu_eproc_aposentadoria.html`,
+`tests/fixtures/trf2_eproc_aposentadoria.html` e
+`tests/fixtures/trf6_eproc_aposentadoria.html`.
 
 ## `bnp_pangea`
 
@@ -634,7 +795,7 @@ Escopo atual:
 GET /SCON/acordaos/
 ```
 
-O provider declara capabilities, possui parser offline com fixture sanitizada e
+O provider declara capabilities, possui parser offline com fixture publica representativa e
 normaliza resultados para `JurisprudenceResult` e `CanonicalDecision`.
 
 Campos extraidos no contrato inicial:
@@ -715,7 +876,7 @@ Escopo atual:
 POST /api/search/search
 ```
 
-O provider declara capabilities, possui fixture JSON sanitizada, normaliza
+O provider declara capabilities, possui fixture JSON publica representativa, normaliza
 resultados para `JurisprudenceResult` e gera `CanonicalDecision`.
 
 Campos extraidos no contrato inicial:

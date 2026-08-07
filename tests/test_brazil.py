@@ -50,10 +50,24 @@ def test_list_courts_filters_by_branch_state_and_status():
         "TJAL",
         "TJAM",
         "TJDFT",
+        "TJGO",
         "TJMS",
+        "TJPI",
         "TJSP",
+        "TNU",
+        "TRF2",
         "TRF4",
+        "TRF6",
     ]
+    assert get_court("TNU").providers == ("tnu_eproc_jurisprudencia",)
+    assert get_court("TRF2").providers == ("trf2_eproc_jurisprudencia",)
+    assert get_court("TRF6").providers == ("trf6_eproc_jurisprudencia",)
+    tjpi = get_court("TJPI")
+    assert tjpi.source_system == "portal_proprio"
+    assert tjpi.providers == ("tjpi_juspi",)
+    tjgo = get_court("TJGO")
+    assert tjgo.source_system == "projudi_jurisprudencia"
+    assert tjgo.providers == ("tjgo_projudi_jurisprudencia",)
 
 
 def test_core_courts_include_official_urls_and_source_systems():

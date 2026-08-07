@@ -61,6 +61,20 @@ Para cada provider superficial, siga este fluxo:
 9. Atualize ou crie o dossie em `docs/source-contracts/`.
 10. Rode `nanojuris contratos --fonte <provider>` e ataque as lacunas restantes.
 
+## Regra de documentacao
+
+O repositorio segue duas camadas:
+
+1. **Provider implementado**: deve ter arquivo proprio em
+   `docs/source-contracts/<provider>.md`, secao em `docs/providers.md`,
+   `ProviderCapabilities`, fixtures e testes.
+2. **Fonte candidata**: deve ter dossie marcado como candidato antes de virar
+   codigo. O dossie deve explicar o que foi testado, o que falta e por que a
+   fonte ainda nao deve ser prometida como provider pronto.
+
+A fila viva de novos providers esta em
+[provider-development-queue.md](provider-development-queue.md).
+
 ## O que nao fazer
 
 - Nao contornar captcha, login, segredo de justica ou controle de acesso.
@@ -132,10 +146,25 @@ Use `needs_deepening` do resumo como fila tecnica. Em geral, priorize:
    `stj_informativo`.
 2. Fontes com alto valor juridico e risco alto, como `tjsp_cjsg` e `stj_scon`.
 3. Familias reutilizaveis com rota limpa, como `eproc_jurisprudencia_federal`
-   para TNU/TRF2/TRF6 e CJSG/e-SAJ para TJAC/TJSP/TJMS.
+   ja promovida para TNU/TRF2/TRF6 e CJSG/e-SAJ para TJAC/TJSP/TJMS.
 4. Fontes boas para demonstracao e jurimetria, como `tjdf_juris`,
-   `tjrs_solr`, `tjba_graphql`, `tjgo_projudi_jurisprudencia` e
+   `tjgo_projudi_jurisprudencia`, `tjrs_solr`, `tjba_graphql` e
    `trf4_eproc_jurisprudencia`.
-5. Contratos parciais relevantes, como `justica_eleitoral_sjur`,
+5. Novos candidatos estaduais mapeados em
+   [state-court-route-mapping-2026-08-07.md](state-court-route-mapping-2026-08-07.md),
+   com prioridade para TJRR/Juris, TJMT/TJPA APIs e TJPB/PJe; TJPI/JusPI e
+   TJGO/Projudi ja foram promovidos para providers implementados.
+6. Contratos parciais relevantes, como `justica_eleitoral_sjur`,
    `trt2_pje_jurisprudencia` e `tjma_jurisconsult`, mantendo bloqueios de
    captcha/antirrobo/desafio claramente documentados.
+
+## Cobertura atual de dossies
+
+Todos os providers atualmente registrados pelo `NanoJurisClient` possuem dossie
+proprio em `docs/source-contracts/`. Os proximos candidatos prioritarios tambem
+ja possuem fichas iniciais:
+
+- `tjrr_juris`;
+- `tjmt_jurisprudencia_api`;
+- `tjpa_jurisprudencia_bff`;
+- `tjpb_pje_jurisprudencia`.

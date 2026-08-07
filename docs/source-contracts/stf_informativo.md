@@ -82,6 +82,6 @@ fonte oficial.
 
 ## Proximos Passos
 
-- [ ] Adicionar fixture real sanitizada com repercussao geral.
+- [ ] Adicionar fixture real publica representativa com repercussao geral.
 - [ ] Mapear pagina HTML do Informativo para links por edicao.
 - [ ] Criar exemplos de jurimetria por ramo do direito, materia e relator.

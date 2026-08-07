@@ -48,6 +48,20 @@ um dos termos de smoke test; a bateria recomendada por ramo esta em
 | Basis/TRT2 | `GET https://basis.trt2.jus.br/discover?query=teletrabalho` | HTTP 200, repositorio DSpace com boletins, atos e doutrina | rota documental, nao provider de decisoes |
 | TJAC/e-SAJ CJSG | `GET https://esaj.tjac.jus.br/cjsg/resultadoSimples.do?...` | HTTP 200 com processo, ementa, relator, orgao, datas e inteiro teor | confirmar fonte forte CJSG |
 | TJCE/e-SAJ CJSG | `GET https://esaj.tjce.jus.br/cjsg/consultaSimples.do` | reset/TLS EOF no ambiente atual | repetir antes de promover |
+| TJES portal atual | `GET https://sistemas.tjes.jus.br/portaltj/Pesquisa.aspx` | timeout em 45s | inconclusivo; repetir com janela maior |
+| TJES ColdFusion antigo | `GET https://aplicativos.tjes.jus.br/sistemaspublicos/consulta_jurisprudencia/det_jurisp.cfm?...` | HTTP 404 no ambiente atual, apesar de resultados antigos indexados | nao promover sem nova rota |
+| TJMT jurisprudencia | `GET https://jurisprudencia.tjmt.jus.br/` | HTTP 200 SPA publica; bundle expõe API Hellsgate, metadados e relatorios | candidato forte, contrato de payload/header pendente |
+| TJMT API inferida | `GET https://hellsgate-preview.tjmt.jus.br/jurisprudencia/api/consulta/1` | HTTP 401 `No API key found in request` | validar header publico do frontend antes de provider |
+| TJPA jurisprudencia | `GET https://jurisprudencia.tjpa.jus.br/` | HTTP 200, portal publico; bundle expõe `/bff/api/decisoes` e metadados PJe | candidato forte, payload pendente |
+| TJPA BFF inferido | `GET https://jurisprudencia.tjpa.jus.br/bff/api/decisoes` | HTTP 404 | metodo/payload ainda incorreto |
+| TJPB/PJe jurisprudencia | `GET https://pje-jurisprudencia.tjpb.jus.br/` | HTTP 200 com formulario rico, campos juridicos e paginacao; outro cliente recebeu Cloudflare challenge | candidato forte com risco WAF |
+| TJPE jurisprudencia | `GET https://portal.tjpe.jus.br/web/jurisprudencia/tjpe-e-turmas-recursais` | HTTP 200, pagina institucional publica com link para Consulta Jurisprudencia Web | entrada documental; endpoint de resultado pendente |
+| TJPE sumulas | `GET https://portal.tjpe.jus.br/servicos/consulta/sumulas` | HTTP 200, sumulas e PDFs publicos | candidato de catalogo/precedentes |
+| TJPE transparencia decisoes | `GET https://portal.tjpe.jus.br/web/transparencia/decis%C3%B5es` | HTTP 200, orienta DJEN/DJE/PJe e Consulta Jurisprudencia Web | rota documental/orientacao |
+| TJPI/JusPI busca | `GET https://jurisprudencia.tjpi.jus.br/jurisprudences/search?q=dano%20moral` | HTTP 200 com resultados reais, CNJ, ementa, relator, orgao e paginacao | promover para fixture/parser HTML |
+| TJRO/LIAME | `GET https://liame.tjro.jus.br/` | HTTP 200, portal de precedentes; probe marcou acesso por texto de UI, sem decisoes | candidato de precedentes, nao acordaos |
+| TJRR/Juris | `GET https://jurisprudencia.tjrr.jus.br/index.xhtml` | HTTP 200 JSF/PrimeFaces com pesquisa, ementa, acordao, relator e links juridicos | promover para HAR/fixture JSF |
+| TJSE jurisprudencia judicial | `GET https://www.tjse.jus.br/portal/consultas/jurisprudencia/judicial` | HTTP 200, pagina oficial de jurisprudencia judicial | entrada forte; rota de resultado pendente |
 
 ## Achados tecnicos
 
@@ -148,7 +162,7 @@ Sinais observados:
 - ausencia de captcha/login no teste inicial.
 
 Decisao: TJPR deve entrar no proximo ciclo de implementacao como provider HTML
-P0. O primeiro passo tecnico e salvar fixture sanitizada com uma busca multi-area
+P0. O primeiro passo tecnico e salvar fixture publica representativa com uma busca multi-area
 (`dano moral`, `plano de saude`, `execucao fiscal`) e criar parser offline antes
 do fetcher live.
 
@@ -615,8 +629,8 @@ Sinais observados:
 - provider `stm_jurisprudencia` ja existe no codigo.
 
 Decisao: manter como fonte especializada relevante. O proximo passo e comparar
-o contrato documentado com o provider existente e adicionar fixture live
-sanitizada se ainda faltar.
+o contrato documentado com o provider existente e adicionar fixture publica
+representativa se ainda faltar.
 
 ### TJAP/Tucujuris
 
@@ -636,14 +650,33 @@ Resultado observado:
 Decisao: documentar bloqueio e nao implementar provider TJAP ate localizar rota
 publica estavel sem desafio.
 
+### Rodada estadual complementar: TJES, TJMT, TJPA, TJPB, TJPE, TJPI, TJRO,
+TJRR e TJSE
+
+A rodada complementar esta detalhada em
+[state-court-route-mapping-2026-08-07.md](state-court-route-mapping-2026-08-07.md).
+Ela retirou esses estados da zona de "sem candidato claro" e separou tres
+grupos:
+
+- candidatos de provider decisorio: TJPI, TJRR, TJMT, TJPA e TJPB;
+- candidatos documentais/precedentes: TJPE, TJSE e TJRO;
+- inconclusivo: TJES.
+
+O achado mais maduro e o TJPI/JusPI, porque a URL de busca server-side retornou
+resultado real com CNJ, ementa, relator, orgao, tipo e paginacao. TJRR tambem e
+forte, mas exige reproducao cuidadosa de JSF/PrimeFaces. TJMT e TJPA sao bons
+alvos de API moderna, porem dependem de HAR/payload: o TJMT respondeu 401 sem a
+chave/header publico usado pelo frontend, e o TJPA respondeu 404 em GET simples
+para `/bff/api/decisoes`.
+
 ## Proximos probes recomendados
 
-1. Parametrizar familia eproc para TNU, TRF2 e TRF6, reaproveitando parser ja
-   testado em TRF4/TJSP.
-2. TJGO: criar contrato Projudi, fixture HTML sanitizada e parser offline de
+1. Validar inteiro teor live da familia eproc federal para TNU, TRF2 e TRF6,
+   agora que os providers de busca ja reaproveitam o parser testado em TRF4/TJSP.
+2. TJGO: criar contrato Projudi, fixture HTML publica representativa e parser offline de
    cards com inteiro teor embutido.
-3. TJRS: criar contrato AJAX/SOLR, fixture JSON sanitizada e parser offline.
-4. TJBA: criar contrato em `docs/source-contracts/`, fixture GraphQL sanitizada
+3. TJRS: criar contrato AJAX/SOLR, fixture JSON publica representativa e parser offline.
+4. TJBA: criar contrato em `docs/source-contracts/`, fixture GraphQL publica representativa
    e parser offline.
 5. TJPR: criar contrato da rota HTML, fixture de resultado e parser offline.
 6. TJSC/TRF2: documentar contrato eproc, descobrir payload de busca e validar
@@ -656,8 +689,17 @@ publica estavel sem desafio.
    bloqueada enquanto exigir captcha.
 10. TST: reproduzir filtro textual com payload salvo em `--json-file` usando
    termos trabalhistas (`horas extras`, `justa causa`, `equiparacao salarial`).
-11. TRF1/TRF3/TRF5: repetir com janela maior e pagina alternativa oficial.
-12. TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23: manter documentados como formulacoes ricas ou bloqueadas, mas bloquear provider
+11. TJPI: criar fixture HTML publica representativa com `q=dano moral`, `q=idpj` e pagina 2.
+12. TJRR: gravar HAR de busca simples e reproduzir JSF/PrimeFaces sem cookies
+   privados.
+13. TJMT/TJPA: capturar payloads publicos dos frontends e validar APIs BFF/REST.
+14. TJPB: repetir busca real e registrar se Cloudflare/WAF aparece em sessao
+   limpa.
+15. TJPE/TJSE/TJRO: aprofundar como catalogos/entradas e localizar endpoint de
+   resultado quando existir.
+16. TJES: repetir `Pesquisa.aspx` com janela maior.
+17. TRF1/TRF3/TRF5: repetir com janela maior e pagina alternativa oficial.
+18. TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23: manter documentados como formulacoes ricas ou bloqueadas, mas bloquear provider
    enquanto resultado depender de captcha/reCAPTCHA/Cloudflare/reset.
 
 ## Ranking de implementacao
@@ -671,8 +713,13 @@ publica estavel sem desafio.
 | 5 | TJPR HTML | alto volume, resultado publico e sinais juridicos completos |
 | 6 | TJSC/eproc | fonte publica forte e potencial de provider por familia tecnica |
 | 7 | TJAC/CJSG | rota CJSG validada e util para endurecer familia e-SAJ |
-| 8 | TST backend | JSON rico, mas filtro textual ainda precisa ser estabilizado |
-| 9 | TSE/TREs metadados | contrato oficial util para filtros, mas busca principal bloqueada |
-| 10 | TRT2 metadados/opcoes | contrato parcial util para diagnostico PJe, mas documentos exigem desafio |
-| 11 | TJMA metadados/sumulas | API limpa parcial; busca principal exige captcha |
-| 12 | TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23 | formularios ricos ou portais conhecidos, mas busca direta bloqueada por captcha/reCAPTCHA/Cloudflare/reset |
+| 8 | TJPI/JusPI | busca HTML limpa com resultados reais e paginacao |
+| 9 | TJRR/Juris JSF | pagina rica, sem bloqueio no GET, bom acervo estadual |
+| 10 | TJMT/TJPA APIs modernas | bundles revelam contratos promissores; falta payload |
+| 11 | TJPB/PJe jurisprudencia | UI rica, mas precisa estabilizar risco WAF |
+| 12 | TST backend | JSON rico, mas filtro textual ainda precisa ser estabilizado |
+| 13 | TSE/TREs metadados | contrato oficial util para filtros, mas busca principal bloqueada |
+| 14 | TRT2 metadados/opcoes | contrato parcial util para diagnostico PJe, mas documentos exigem desafio |
+| 15 | TJPE/TJSE/TJRO documentais | entradas uteis para sumulas, precedentes e orientacao, mas ainda sem busca decisoria limpa |
+| 16 | TJMA metadados/sumulas | API limpa parcial; busca principal exige captcha |
+| 17 | TJES/TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23 | inconclusivos, formularios ricos ou portais conhecidos, mas busca direta bloqueada/instavel |

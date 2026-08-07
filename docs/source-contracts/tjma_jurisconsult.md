@@ -49,7 +49,7 @@
 ## Fixtures
 - Sucesso: pendente para metadados.
 - Vazio: pendente.
-- Erro: `captcha_not_provided` pendente de fixture sanitizada.
+- Erro: `captcha_not_provided` pendente de fixture publica representativa.
 - Documento: nao aplicavel nesta fase.
 
 ## MCP e agentes

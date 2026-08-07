@@ -58,7 +58,7 @@
 - Mensagem segura para o usuario: "A API publica expõe metadados eleitorais, mas a busca de decisoes retornou controle antirrobo em sessao limpa."
 
 ## Proximos passos
-- [ ] Coletar HAR sanitizado de uma busca manual autorizada para entender payload exato.
+- [ ] Coletar HAR revisado sem cookies, tokens ou dados locais de navegador de uma busca manual autorizada para entender payload exato.
 - [ ] Verificar se existe endpoint documentado de busca sem token.
 - [ ] Criar fixture de `classes` e `relatorias`.
 - [ ] Adicionar testes de diagnostico para `anti_robot`.

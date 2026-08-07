@@ -71,7 +71,7 @@ Implementation notes:
 
 - Capture a HAR from the browser with one simple text query and one process
   number query before writing the parser.
-- Prefer fixture-driven parsing from real sanitized HTML.
+- Prefer fixture-driven parsing from real public representative HTML.
 - Treat JavaScript/session parameters as volatile.
 - Parse result pages defensively and keep raw source URLs in the trace.
 
@@ -212,7 +212,7 @@ Why not one large provider:
 
 1. Capture contracts.
 
-   Save sanitized fixtures for:
+   Save public representative fixtures for:
 
    ```text
    tests/fixtures/stj_scon_acordaos_result.html
@@ -253,7 +253,7 @@ Why not one large provider:
 
 - `JurisprudenceResult.source` clearly identifies the STJ source.
 - Public URLs are preserved in `SourceTrace`.
-- The parser works from sanitized fixtures.
+- The parser works from public representative fixtures.
 - Network errors, 403/429 and layout misses raise typed NanoJuris errors.
 - Optional live tests can pass or explicitly skip/mark source control changes.
 - Docs explain official STJ operators without inventing a parallel query

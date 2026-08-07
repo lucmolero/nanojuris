@@ -13,7 +13,7 @@
 
 O HAR publico analisado em 06/08/2026 mostrou que a busca principal de acordaos
 usa `GET /SCON/pesquisar.jsp` com parametros na query string. O escopo atual
-cobre lista de resultados, parser por fixture HTML sanitizada e parser da
+cobre lista de resultados, parser por fixture HTML publica representativa e parser da
 estrutura real `.documento` observada no HAR. O inteiro teor ainda nao foi
 promovido como contrato estavel.
 

@@ -22,8 +22,10 @@ SourceSystem = Literal[
     "datajud",
     "esaj_cjsg",
     "eproc",
+    "eproc_jurisprudencia",
     "pje",
     "portal_proprio",
+    "projudi_jurisprudencia",
 ]
 
 
@@ -146,7 +148,9 @@ _CORE_COURTS = [
         "federal",
         "national",
         official_url="https://www.cjf.jus.br/",
-        source_system="portal_proprio",
+        source_system="eproc_jurisprudencia",
+        provider_status="implemented",
+        providers=("tnu_eproc_jurisprudencia",),
     ),
 ]
 
@@ -166,6 +170,9 @@ _FEDERAL_COURTS = [
         "regional",
         region="2",
         official_url="https://www.trf2.jus.br/",
+        source_system="eproc_jurisprudencia",
+        provider_status="implemented",
+        providers=("trf2_eproc_jurisprudencia",),
     ),
     CourtInfo(
         "TRF3",
@@ -201,6 +208,9 @@ _FEDERAL_COURTS = [
         "regional",
         region="6",
         official_url="https://portal.trf6.jus.br/",
+        source_system="eproc_jurisprudencia",
+        provider_status="implemented",
+        providers=("trf6_eproc_jurisprudencia",),
     ),
 ]
 
@@ -288,6 +298,9 @@ _STATE_COURTS = [
         "state",
         state="GO",
         official_url="https://www.tjgo.jus.br/",
+        source_system="projudi_jurisprudencia",
+        provider_status="implemented",
+        providers=("tjgo_projudi_jurisprudencia",),
     ),
     CourtInfo(
         "TJMA",
@@ -355,6 +368,9 @@ _STATE_COURTS = [
         "state",
         state="PI",
         official_url="https://www.tjpi.jus.br/",
+        source_system="portal_proprio",
+        provider_status="implemented",
+        providers=("tjpi_juspi",),
     ),
     CourtInfo(
         "TJPR",

@@ -22,7 +22,7 @@ copie fluxos de captcha, login, cookie ou browser stealth. A ficha
    - ausencia de bloqueio como pagina exclusiva de captcha, Cloudflare,
      Turnstile, login obrigatorio ou erro de sessao;
    - campos juridicos objetivos visiveis no HTML publico.
-4. Salvar uma fixture sanitizada com um exemplo publico minimo.
+4. Salvar uma fixture publica representativa com um exemplo publico minimo.
 5. Implementar parser offline contra a fixture.
 6. Implementar fetch responsavel no provider.
 7. Adicionar diagnostics, capabilities e teste live opcional desligado por
@@ -309,6 +309,30 @@ Decisao: promover como provider `tre_sp_temas`, categoria
 `electoral_jurisprudence`, para curadoria tematica eleitoral paulista. Nao e
 busca geral de acordaos.
 
+## Registro de descoberta: 2026-08-07 - estados antes pouco mapeados
+
+A rodada complementar esta consolidada em
+[state-court-route-mapping-2026-08-07.md](state-court-route-mapping-2026-08-07.md).
+Ela revisou TJES, TJMT, TJPA, TJPB, TJPE, TJPI, TJRO, TJRR e TJSE sem depender
+dos antigos palpites CJSG.
+
+Achados promovidos para a fila tecnica:
+
+| Fonte | Rota oficial | Classificacao |
+| --- | --- | --- |
+| TJPI/JusPI | `https://jurisprudencia.tjpi.jus.br/jurisprudences/search?q=dano%20moral` | candidato forte de provider HTML |
+| TJRR/Juris | `https://jurisprudencia.tjrr.jus.br/index.xhtml` | candidato forte JSF/PrimeFaces |
+| TJMT/Jurisprudencia | `https://jurisprudencia.tjmt.jus.br/` | candidato de API moderna; header/payload pendente |
+| TJPA/Jurisprudencia | `https://jurisprudencia.tjpa.jus.br/` | candidato de BFF/API; payload pendente |
+| TJPB/PJe Jurisprudencia | `https://pje-jurisprudencia.tjpb.jus.br/` | candidato PJe com risco WAF a validar |
+| TJPE | `https://portal.tjpe.jus.br/servicos/consulta/sumulas` | catalogo publico de sumulas/precedentes |
+| TJSE | `https://www.tjse.jus.br/portal/consultas/jurisprudencia/judicial` | entrada oficial de jurisprudencia judicial |
+| TJRO/LIAME | `https://liame.tjro.jus.br/` | candidato de precedentes/catalogo |
+
+TJES permaneceu inconclusivo: `https://sistemas.tjes.jus.br/portaltj/Pesquisa.aspx`
+deu timeout em 45s, e a rota ColdFusion antiga retornou HTTP 404. Deve ser
+retestado com janela maior antes de qualquer provider.
+
 ### Bloqueado ou pendente
 
 | Fonte | Resultado do probe limpo | Classificacao |
@@ -333,9 +357,9 @@ busca geral de acordaos.
 | TJSC/CJSG | DNS falhou para `https://esaj.tjsc.jus.br/cjsg/resultadoCompleta.do` | endpoint candidato invalido |
 | TJBA/CJSG | falha de handshake SSL em `https://esaj.tjba.jus.br/cjsg/resultadoCompleta.do` | nao promover sem perfil SSL/endpoint correto |
 | TJRN/CJSG | HTTP 403 Access Denied em `https://esaj.tjrn.jus.br/cjsg/resultadoCompleta.do` | acesso bloqueado no probe limpo |
-| TJAP/TJPE/TJSE/CJSG | HTTP 404 nos endpoints `/cjsg/resultadoCompleta.do` testados | endpoints candidatos invalidos |
-| TJES/CJSG | HTTP 503 em `https://sistemas.tjes.jus.br/cjsg/resultadoCompleta.do` | fonte indisponivel no probe limpo |
+| TJAP/TJPE/TJSE/CJSG | HTTP 404 nos endpoints `/cjsg/resultadoCompleta.do` testados | endpoints CJSG invalidos; TJPE/TJSE ja possuem novas entradas oficiais documentais |
+| TJES/CJSG | HTTP 503 em `https://sistemas.tjes.jus.br/cjsg/resultadoCompleta.do` | endpoint CJSG indisponivel; portal atual `Pesquisa.aspx` ainda inconclusivo |
 | TJMA/CJSG | HTTP 404 em `https://jurisconsult.tjma.jus.br/cjsg/resultadoCompleta.do` | endpoint candidato invalido |
-| TJRO/CJSG | conexao fechada sem resposta em `https://webapp.tjro.jus.br/cjsg/resultadoCompleta.do` | nao promover sem endpoint estavel |
-| TJMT/TJPA/TJRR/CJSG | HTTP 405 nos endpoints `/cjsg/resultadoCompleta.do` testados | metodo/rota nao confirmado; precisa nova descoberta |
+| TJRO/CJSG | conexao fechada sem resposta em `https://webapp.tjro.jus.br/cjsg/resultadoCompleta.do` | nao promover CJSG; LIAME foi documentado como rota de precedentes |
+| TJMT/TJPA/TJRR/CJSG | HTTP 405 nos endpoints `/cjsg/resultadoCompleta.do` testados | nao usar CJSG; novas rotas oficiais TJMT/TJPA/TJRR foram documentadas |
 | TJTO/CJSG | HTTP 403 em `https://jurisprudencia.tjto.jus.br/cjsg/resultadoCompleta.do` | acesso bloqueado no probe limpo |

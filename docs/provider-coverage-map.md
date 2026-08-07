@@ -37,13 +37,22 @@ segredo de justica ou controles de acesso.
 | P0 | TJBA jurisprudencia GraphQL | rota publica estruturada validada; retorna decisoes, ementa, relator, orgao julgador e numero processual | `CanonicalDecision` via JSON estruturado |
 | P0 | TJPR jurisprudencia HTML | rota publica validada com resultado, relator, orgao julgador, ementa e paginacao | `CanonicalDecision` via parser HTML |
 | P0 | TJSC/eproc jurisprudencia | formulario publico eproc validado; potencial de reuso por familia tecnica | `CanonicalDecision` e contrato `eproc_jurisprudencia` |
-| P0 | TNU/eproc jurisprudencia | POST publico validado em `listar_resultados`; reuso direto da familia eproc | `CanonicalDecision` federal/TNU com inteiro teor publico quando disponivel |
-| P0 | TRF2/eproc jurisprudencia | POST publico validado em `listar_resultados`; cobre TRF2, TRU2 e Turmas Recursais | `CanonicalDecision` federal com origens eproc |
-| P0 | TRF6/eproc jurisprudencia | POST publico validado em `listar_resultados`; cobre TRF6, TRU6, Turmas Recursais e Varas Federais | `CanonicalDecision` federal com origens eproc |
-| P0 | TJGO/Projudi jurisprudencia | POST publico validado; resultado HTML contem alto volume, processo, orgao, magistrado, decisao e inteiro teor embutido | `CanonicalDecision` via parser HTML Projudi |
+| P0 | TNU/eproc jurisprudencia | ja implementado; POST publico validado em `listar_resultados`; reuso direto da familia eproc | `CanonicalDecision` federal/TNU com inteiro teor publico quando disponivel |
+| P0 | TRF2/eproc jurisprudencia | ja implementado; POST publico validado em `listar_resultados`; cobre TRF2, TRU2 e Turmas Recursais | `CanonicalDecision` federal com origens eproc |
+| P0 | TRF6/eproc jurisprudencia | ja implementado; POST publico validado em `listar_resultados`; cobre TRF6, TRU6, Turmas Recursais e Varas Federais | `CanonicalDecision` federal com origens eproc |
+| P0 | TJGO/Projudi jurisprudencia | ja implementado; POST publico validado, alto volume, processo, orgao, magistrado, decisao e inteiro teor embutido | `CanonicalDecision` via parser HTML Projudi |
 | P0 | TJAC/e-SAJ CJSG | resultado simples publico validado com ementa, relator, orgao, datas e inteiro teor | `CanonicalDecision` via familia CJSG/e-SAJ |
+| P0 | TJPI/JusPI jurisprudencia | ja implementado; GET publico de busca e detalhe HTML retornam conteudo decisorio valido | `CanonicalDecision` e `CanonicalDocument` via parser HTML |
+| P1 | TJRR/Juris JSF | pagina JSF/PrimeFaces publica rica, com filtros e sinais juridicos; falta reproduzir postback de busca | `CanonicalDecision` apos HAR/payload limpo |
+| P1 | TJMT jurisprudencia API Hellsgate | SPA publica e bundle expuseram API de consulta, metadados e relatorios; GET direto exige chave/header publico do frontend | contrato API a aprofundar antes de provider |
+| P1 | TJPA jurisprudencia BFF | SPA publica e bundle expuseram `/bff/api/decisoes`, PJe classes/assuntos e temas; falta metodo/payload de busca | contrato BFF a aprofundar antes de provider |
+| P1 | TJPB/PJe jurisprudencia | formulario publico com campos juridicos e paginacao; comportamento WAF variou por cliente | provider somente apos fixture de resultado real sem desafio |
 | P0 | STJ jurisprudencia/SCON | provider inicial `stj_scon` com parser offline; ficha em [stj-source-profile.md](stj-source-profile.md) | acordaos como `CanonicalDecision`; inteiro teor em fase futura |
 | P0 | STF jurisprudencia | provider inicial `stf_juris` via API JSON observada por HAR; WAF/SSL diagnosticados | acordaos como `CanonicalDecision`; inteiro teor como URL ate validar documento sem 403 |
+| P1 | TJPE sumulas e orientacao de decisoes | paginas publicas para sumulas, transparencia e Consulta Jurisprudencia Web; ainda sem endpoint limpo de acordaos | catalogo documental/precedentes locais |
+| P1 | TJSE jurisprudencia judicial | pagina oficial publica de jurisprudencia judicial; falta rota final de resultado | entrada documental e candidato de provider |
+| P1 | TJRO/LIAME | portal publico de precedentes/temas com filtros por tribunal, especie e situacao | `CanonicalPrecedent`/catalogo, nao acordaos |
+| P2 | TJES jurisprudencia | portal atual `Pesquisa.aspx` deu timeout e rota ColdFusion antiga retornou 404 | repetir probe antes de promover |
 | P1 | TJMA/Jurisconsult metadados e sumulas | API publica limpa para relatorios, tipos, orgaos e links de sumulas/IAC/IRDR; busca principal exige captcha | `CanonicalPrecedent`/catalogo parcial; nao automatizar acordaos sem fluxo limpo |
 | P1 | TST jurisprudencia publica | SPA com backend identificado, mas payload exato ainda nao promovido | decisoes trabalhistas apos probe limpo |
 | P1 | TSE/TREs SJUR metadados | backend oficial identificado; classes e relatorias retornam JSON publico, mas busca principal retornou antirrobo | catalogo/filtros eleitorais; decisoes somente se fluxo limpo existir |
@@ -62,6 +71,10 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `tjdf_juris`: HTML SISTJ/TJDFT para acordaos e bases indexadas;
 - `tjac_esaj_cpopg`: e-SAJ CPOPg/TJAC para consulta processual publica;
 - `tjms_cjsg`: HTML e-SAJ/CJSG do TJMS;
+- `tjgo_projudi_jurisprudencia`: HTML publico PROJUDI/TJGO com POST de busca,
+  cards decisorios e inteiro teor embutido no resultado;
+- `tjpi_juspi`: HTML publico JusPI/TJPI com busca server-side, paginacao e
+  detalhe publico em `/jurisprudences/<id>/public`;
 - `tjsp_cjsg`: HTML ESAJ/CJSG de jurisprudencia;
 - `tjsp_nugepnac`: catalogos oficiais TJSP/NugepNac de precedentes;
 - `tce_sp_jurisprudencia`: catalogos estaticos TCE-SP de sumulas e boletins;
@@ -70,9 +83,17 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `tjba_graphql`: GraphQL publico de jurisprudencia do TJBA;
 - `tjpr_juris`: HTML publico de jurisprudencia do TJPR;
 - `eproc_jurisprudencia`: familia eproc para TJSC e tribunais que exponham
-  pesquisa publica equivalente, incluindo TNU, TRF2 e TRF6;
-- `projudi_jurisprudencia`: HTML publico de jurisprudencia/atos judiciais do
-  TJGO quando o POST limpo retornar resultados sem validacao humana;
+  pesquisa publica equivalente; TNU, TRF2 e TRF6 ja possuem providers
+  concretos registrados como `tnu_eproc_jurisprudencia`,
+  `trf2_eproc_jurisprudencia` e `trf6_eproc_jurisprudencia`;
+- `projudi_jurisprudencia`: familia PROJUDI para jurisprudencia/atos judiciais,
+  iniciada por TJGO com POST limpo e parser de cards HTML;
+- `juris_jsf`: familia JSF/PrimeFaces de jurisprudencia, observada no TJRR,
+  exige reproducao responsavel do postback da propria sessao publica;
+- `jurisprudencia_spa_api`: frontends modernos com APIs BFF/REST observadas em
+  TJMT e TJPA; promover apenas apos payload/header publico validado;
+- `pje_jurisprudencia_estadual`: instancias estaduais de pesquisa PJe como
+  TJPB; alto valor, mas dependem de estabilidade sem desafio WAF/captcha;
 - `tjma_jurisconsult`: API publica parcial para metadados, filtros e links de
   precedentes/sumulas; busca principal fica bloqueada enquanto exigir captcha;
 - `justica_eleitoral_sjur`: API publica parcial para classes/relatorias do
@@ -118,18 +139,18 @@ Antes de implementar um provider, preencher uma ficha tecnica com:
 - documentos e formatos retornados;
 - sinais de captcha, login, segredo de justica ou bloqueio;
 - payload minimo responsavel;
-- fixture offline sanitizada;
+- fixture offline publica representativa;
 - teste live opcional e desligado por padrao.
 
 HARs, DevTools e browser network podem ser usados como ferramenta local de
 pesquisa, mas nao devem entrar no pacote, nos testes ou em fixtures sem
-sanitizacao rigorosa. O artefato publico deve ser a ficha de fonte e o provider
+revisao rigorosa para remover cookies, tokens e segredos locais, preservando o conteudo publico da fonte. O artefato publico deve ser a ficha de fonte e o provider
 testado, nao o HAR bruto.
 
 ## Evidencia ESAJ/TJSP a partir de pesquisa local
 
 Pesquisa local com HAR do portal ESAJ/TJSP de jurisprudencia indicou estas rotas
-sanitizadas relevantes:
+publicas relevantes:
 
 | Rota | Metodo | Tipo | Campos observados | Classificacao |
 | --- | --- | --- | --- | --- |
@@ -158,6 +179,11 @@ interromper com erro claro e `AccessStatus.ACCESS_CONTROL_REQUIRED`.
 2. Aprofundar bases adicionais do `stf_juris`: decisoes, sumulas e informativos.
 3. Expandir `stj_scon` para inteiro teor publico quando a fonte responder sem
   controle de acesso.
-4. Separar provider por familia de sistema quando houver reaproveitamento real.
-5. Criar benchmark de completude por provider e campo canonico.
-6. Definir contrato de plugin externo para providers fora do core.
+4. Validar live a rota de inteiro teor das instancias federais eproc
+  TNU/TRF2/TRF6 por `id_jurisprudencia`.
+5. Converter a rodada estadual
+  [state-court-route-mapping-2026-08-07.md](state-court-route-mapping-2026-08-07.md)
+  em fixtures para TJRR, TJMT, TJPA e TJPB; TJPI ja foi promovido.
+6. Separar provider por familia de sistema quando houver reaproveitamento real.
+7. Criar benchmark de completude por provider e campo canonico.
+8. Definir contrato de plugin externo para providers fora do core.

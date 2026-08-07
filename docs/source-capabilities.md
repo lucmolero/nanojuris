@@ -161,6 +161,47 @@ Cobertura objetiva:
 Estado atual: provider implementado com fixture offline e rota live reproduzida
 para `infanticidio` durante a descoberta baseada nos scripts CourtsBR.
 
+### `tnu_eproc_jurisprudencia`, `trf2_eproc_jurisprudencia`, `trf6_eproc_jurisprudencia`
+
+Categoria: jurisprudencia federal eproc.
+
+Cobertura objetiva:
+
+- busca textual por `POST /externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados`;
+- filtros publicos de texto, numero de processo, datas e tipo documental;
+- TNU: origem `TNU`;
+- TRF2: origens `TRF2`, `TRU2` e Turmas Recursais;
+- TRF6: origens `TRF6`, `TRU6`, Turmas Recursais e Varas Federais;
+- numero CNJ, tipo decisorio, classe, relator quando presente, orgao julgador,
+    datas, ementa/decisao, `id_jurisprudencia` e link de inteiro teor;
+- canonicalizacao para `CanonicalDecision`;
+- `get_document` para a rota publica de inteiro teor por `id_jurisprudencia`,
+    quando a instancia responder sem controle de acesso.
+
+Estado atual: providers implementados com fixtures publicas representativas para
+`aposentadoria`; probes live em 2026-08-07 retornaram grade A nas tres fontes,
+com `resultadoItem`, ementa, relator/orgao quando disponiveis e link de inteiro
+teor sem captcha/login no fluxo de busca.
+
+### `tjgo_projudi_jurisprudencia`
+
+Categoria: jurisprudencia de tribunal.
+
+Cobertura objetiva:
+
+- busca textual no PROJUDI/TJGO por `POST /ConsultaJurisprudencia`;
+- filtros publicos de instancia, numero de processo, tipo de ato e datas;
+- numero CNJ, magistrado/relator, orgao/unidade, tipo de ato, publicacao,
+    `Id_Arquivo` e inteiro teor embutido no HTML do card;
+- canonicalizacao para `CanonicalDecision`;
+- texto publico preservado sem redaction automatica pelo provider;
+- rota validada em sessao HTTP limpa para `dano moral`, com alto volume de
+    resultados e cards reais.
+
+Estado atual: provider implementado com fixtures reais de sucesso e
+vazio/formulario sem cards. Download separado por `Id_Arquivo` segue pendente
+ate haver contrato publico limpo.
+
 ### `tjms_cjsg`
 
 Categoria: jurisprudencia de tribunal.
@@ -177,6 +218,26 @@ Cobertura objetiva:
 
 Estado atual: provider implementado com fixture offline reaproveitando o contrato
 CJSG e smoke live reproduzido durante pesquisa de projetos abertos no GitHub.
+
+### `tjpi_juspi`
+
+Categoria: jurisprudencia de tribunal.
+
+Cobertura objetiva:
+
+- busca textual no TJPI/JusPI por HTML publico server-side;
+- paginacao por `page` observada nos links oficiais da propria fonte;
+- filtros publicos de tipo, relator, classe, orgao e periodo quando enviados
+    conforme formulario;
+- numero CNJ, tipo decisorio, assunto, classe, relator, orgao/gabinete, data de
+    publicacao, ementa/resumo e URL de detalhe;
+- detalhe publico em `/jurisprudences/<id>/public` convertido para
+    `CanonicalDocument` com hash, tamanho, trace e metadados;
+- canonicalizacao para `CanonicalDecision` nos resultados.
+
+Estado atual: provider implementado com fixtures offline para sucesso, vazio e
+detalhe publico. A rota live foi reproduzida com `requests` limpo para
+`dano moral`, retornando resultados reais e inteiro teor HTML publico.
 
 ### `tjsp_cjsg`
 
@@ -303,7 +364,7 @@ Cobertura objetiva inicial:
 - acordaos publicos do STJ/SCON por HTML;
 - classe processual, numero, registro, relator, orgao julgador, datas, ementa e
     URL de documento quando disponivel;
-- parser offline com fixture sanitizada;
+- parser offline com fixture publica representativa;
 - canonicalizacao para `CanonicalDecision`;
 - deteccao de captcha/controle de acesso sem bypass.
 

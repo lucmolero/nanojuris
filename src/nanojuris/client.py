@@ -23,6 +23,11 @@ from nanojuris.models import (
 from nanojuris.providers.base import JurisprudenceProvider
 from nanojuris.providers.bnp_pangea import BnpPangeaProvider
 from nanojuris.providers.comunica_pje import ComunicaPjeProvider
+from nanojuris.providers.eproc_jurisprudencia_federal import (
+    TnuEprocJurisprudenciaProvider,
+    Trf2EprocJurisprudenciaProvider,
+    Trf6EprocJurisprudenciaProvider,
+)
 from nanojuris.providers.stf_informativo import StfInformativoProvider
 from nanojuris.providers.stf_juris import StfJurisProvider
 from nanojuris.providers.stj_informativo import StjInformativoProvider
@@ -34,7 +39,9 @@ from nanojuris.providers.tjac_esaj_cpopg import TjacEsajCpopgProvider
 from nanojuris.providers.tjal_cjsg import TjalCjsgProvider
 from nanojuris.providers.tjam_cjsg import TjamCjsgProvider
 from nanojuris.providers.tjdf_juris import TjdfJurisProvider
+from nanojuris.providers.tjgo_projudi_jurisprudencia import TjgoProjudiJurisprudenciaProvider
 from nanojuris.providers.tjms_cjsg import TjmsCjsgProvider
+from nanojuris.providers.tjpi_juspi import TjpiJuspiProvider
 from nanojuris.providers.tjsp_cjsg import TjspCjsgProvider
 from nanojuris.providers.tjsp_eproc_jurisprudencia import TjspEprocJurisprudenciaProvider
 from nanojuris.providers.tjsp_esaj_cpopg import TjspEsajCpopgProvider
@@ -68,6 +75,7 @@ class NanoJurisClient:
             else [
                 BnpPangeaProvider(self.config),
                 ComunicaPjeProvider(self.config),
+                TnuEprocJurisprudenciaProvider(self.config),
                 StfInformativoProvider(self.config),
                 StfJurisProvider(self.config),
                 StjInformativoProvider(self.config),
@@ -77,15 +85,19 @@ class NanoJurisClient:
                 TjacCjsgProvider(self.config),
                 TjacEsajCpopgProvider(self.config),
                 TjdfJurisProvider(self.config),
+                TjgoProjudiJurisprudenciaProvider(self.config),
                 TjalCjsgProvider(self.config),
                 TjamCjsgProvider(self.config),
                 TjmsCjsgProvider(self.config),
+                TjpiJuspiProvider(self.config),
                 TjspCjsgProvider(self.config),
                 TjspEprocJurisprudenciaProvider(self.config),
                 TjspEsajCpopgProvider(self.config),
                 TjspNugepnacProvider(self.config),
                 TreSpTemasProvider(self.config),
+                Trf2EprocJurisprudenciaProvider(self.config),
                 Trf4EprocJurisprudenciaProvider(self.config),
+                Trf6EprocJurisprudenciaProvider(self.config),
             ]
         )
         self.providers = {provider.name: provider for provider in provider_list}

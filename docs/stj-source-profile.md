@@ -33,7 +33,7 @@ Escopo v1:
 - preservar URL oficial de resultado e inteiro teor quando disponivel;
 - mapear resultados para `JurisprudenceResult` e `CanonicalDecision`;
 - declarar limites e formatos em `ProviderCapabilities`;
-- manter testes offline por fixture HTML sanitizada.
+- manter testes offline por fixture HTML publica representativa.
 
 Fora do escopo v1:
 
@@ -64,7 +64,7 @@ Campos minimos para a primeira fixture:
 - ementa ou resumo publico;
 - URL oficial do resultado;
 - URL de inteiro teor quando disponivel;
-- raw metadata sanitizado para auditoria.
+- raw metadata publico revisado para auditoria.
 
 Campos derivados permitidos:
 
@@ -105,7 +105,7 @@ Riscos conhecidos:
 
 ## Fixtures e testes obrigatorios
 
-Antes de implementar busca live, criar fixtures sanitizadas:
+Antes de implementar busca live, criar fixtures publicas representativas:
 
 ```text
 tests/fixtures/stj_scon_acordaos_result.html
@@ -134,7 +134,7 @@ Testes minimos:
 
 ## Ordem de implementacao
 
-1. Capturar fixture HTML sanitizada de uma busca simples no SCON acordaos.
+1. Capturar fixture HTML publica representativa de uma busca simples no SCON acordaos.
 2. Criar parser puro `parse_stj_scon_results(html)`.
 3. Criar `StjSconProvider.get_capabilities()`.
 4. Criar busca usando `HttpFetcher` e timeout conservador.

@@ -2,6 +2,8 @@
 
 ## Identidade
 - Fonte oficial: TNU/eproc, TRF2/eproc e TRF6/eproc.
+- Providers implementados: `tnu_eproc_jurisprudencia`, `trf2_eproc_jurisprudencia`
+  e `trf6_eproc_jurisprudencia`.
 - Categoria: `court_jurisprudence`.
 - Familia tecnica: `eproc_jurisprudencia`.
 - URL inicial TNU: `https://eproctnu.cjf.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/pesquisar`.
@@ -61,10 +63,14 @@
 - Mudanca de layout: risco medio por HTML de sistema.
 
 ## Fixtures
-- Sucesso: pendente para cada instancia.
-- Vazio: pendente.
-- Erro: pendente.
-- Documento: pendente.
+- Sucesso TNU: `tests/fixtures/tnu_eproc_aposentadoria.html`.
+- Sucesso TRF2: `tests/fixtures/trf2_eproc_aposentadoria.html`.
+- Sucesso TRF6: `tests/fixtures/trf6_eproc_aposentadoria.html`.
+- Vazio: coberto por parser eproc quando a fonte retorna formulario sem cards.
+- Erro/acesso: coberto por respostas fake em
+  `tests/test_eproc_jurisprudencia_federal.py`.
+- Documento: coberto por resposta fake; rota live deve ser validada por
+  instancia antes de demonstracoes de inteiro teor em escala.
 
 ## MCP e agentes
 - Quando usar: consultas federais/TNU/TRF2/TRF6 por tema, ementa, inteiro teor ou numero.
@@ -73,8 +79,8 @@
 - Riscos: HTML volumoso, mudanca de labels e necessidade de rate limit.
 
 ## Proximos passos
-- [ ] Parametrizar provider eproc por base URL, tribunal e origens.
-- [ ] Criar fixtures sanitizadas de TNU, TRF2 e TRF6.
-- [ ] Reusar parser de `trf4_eproc_jurisprudencia`.
+- [x] Parametrizar provider eproc por base URL, tribunal e origens.
+- [x] Criar fixtures publicas representativas de TNU, TRF2 e TRF6.
+- [x] Reusar parser de `trf4_eproc_jurisprudencia`.
 - [ ] Validar rota de inteiro teor com `id_jurisprudencia` real de cada fonte.
-- [ ] Adicionar testes de sucesso, vazio e acesso restrito.
+- [x] Adicionar testes de sucesso, vazio e acesso restrito.

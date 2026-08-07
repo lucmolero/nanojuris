@@ -27,7 +27,7 @@ Na sequencia de cobertura nacional, o catalogo recebeu URLs oficiais estaveis
 para orgaos centrais, TRFs e TJs, e o STJ passou a ter ficha tecnica publica em
 [stj-source-profile.md](stj-source-profile.md).
 O provider inicial `stj_scon` foi implementado com parser offline, fixture
-sanitizada, `ProviderCapabilities`, registro no cliente padrao e canonicalizacao
+publica representativa, `ProviderCapabilities`, registro no cliente padrao e canonicalizacao
 para `CanonicalDecision`.
 Rodada live: BNP/Pangea respondeu catalogo, busca e MCP search com dados reais;
 TJSP/CJSG e STJ/SCON retornaram controle de acesso em chamadas diretas e foram
@@ -203,7 +203,7 @@ Live tests permanecem opt-in. A matriz preserva a fronteira extraction-first.
 Status: bom.
 
 Proximo criterio tecnico: checklist de fonte responsavel antes de novos providers
-e sanitizacao documentada de fixtures.
+e politica documentada de fixtures publicas representativas.
 
 ### QA e benchmark
 
@@ -360,7 +360,7 @@ O que precisa melhorar:
 - falta guia formal de provider;
 - falta template de provider;
 - falta plugin registry via entrypoints;
-- falta checklist de fixture sanitizada.
+- falta checklist de fixture publica representativa.
 
 Veredito: possivel para equipe interna; ainda trabalhoso para comunidade.
 

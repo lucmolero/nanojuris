@@ -173,6 +173,28 @@ SOURCE_OVERRIDES: dict[str, dict[str, Any]] = {
             "Documentar limites por primeiro grau, segundo grau e colegio recursal.",
         ],
     },
+    "tnu_eproc_jurisprudencia": {
+        "contract_level": 5,
+        "source_family": "html_jurisprudencia_eproc",
+        "mcp_recommendation": "Use para jurisprudencia federal da TNU por tema ou numero.",
+        "jurimetry_fit": "alto para uniformizacao federal e previdenciario.",
+        "risk_level": "baixo",
+        "gaps": [
+            "Validar live a rota de inteiro teor com id_jurisprudencia real.",
+            "Adicionar fixtures por tipo decisorio alem de acordaos.",
+        ],
+    },
+    "trf2_eproc_jurisprudencia": {
+        "contract_level": 5,
+        "source_family": "html_jurisprudencia_eproc",
+        "mcp_recommendation": "Use para jurisprudencia federal do TRF2, TRU2 e Turmas Recursais.",
+        "jurimetry_fit": "alto para estudos federais regionais.",
+        "risk_level": "baixo",
+        "gaps": [
+            "Validar live a rota de inteiro teor com id_jurisprudencia real.",
+            "Aprofundar filtros de origem TRF2, TRU2 e Turmas Recursais.",
+        ],
+    },
     "trf4_eproc_jurisprudencia": {
         "contract_level": 5,
         "source_family": "html_jurisprudencia_eproc",
@@ -182,6 +204,19 @@ SOURCE_OVERRIDES: dict[str, dict[str, Any]] = {
         "gaps": [
             "Expandir fixtures por tipo decisorio.",
             "Documentar paginacao, ordenacao e limites de consulta.",
+        ],
+    },
+    "trf6_eproc_jurisprudencia": {
+        "contract_level": 5,
+        "source_family": "html_jurisprudencia_eproc",
+        "mcp_recommendation": (
+            "Use para jurisprudencia federal do TRF6, TRU6, Turmas Recursais e Varas Federais."
+        ),
+        "jurimetry_fit": "alto para estudos federais regionais em Minas Gerais.",
+        "risk_level": "baixo",
+        "gaps": [
+            "Validar live a rota de inteiro teor com id_jurisprudencia real.",
+            "Aprofundar filtros de origem TRF6, TRU6, Turmas Recursais e Varas Federais.",
         ],
     },
 }

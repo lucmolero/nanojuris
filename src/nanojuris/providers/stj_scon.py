@@ -213,7 +213,7 @@ def parse_stj_scon_results(
     trace: SourceTrace,
     base_url: str,
 ) -> SearchPage:
-    """Parse a sanitized STJ SCON result page into normalized results."""
+    """Parse a representative STJ SCON result page into normalized results."""
 
     if _looks_like_access_control(html):
         raise AccessControlRequiredError("STJ/SCON returned captcha/access-control HTML")
