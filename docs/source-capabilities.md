@@ -187,6 +187,8 @@ Cobertura objetiva:
 - busca por inteiro teor, ementa, numero e periodo;
 - acordaos, monocraticas e homologacoes quando retornados pela fonte;
 - classe, assunto, relator, comarca, orgao julgador, data e URL de inteiro teor;
+- `get_document` com texto limpo de HTML publico, hash, tamanho, trace e
+  metadados tecnicos;
 - diagnostico de retorno ao formulario, campos `recaptcha_response_token`,
   `uuidCaptcha`, rota `captchaControleAcesso`, scripts de login e containers de
   resultado;

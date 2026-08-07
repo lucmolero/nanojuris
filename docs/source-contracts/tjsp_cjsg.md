@@ -16,6 +16,11 @@ tipo de decisao e inteiro teor quando publico. A fonte pode exigir captcha,
 validacao de acesso ou rotas de controle; o NanoJuris deve reportar isso sem
 bypass.
 
+Quando `getArquivo.do` retorna HTML publico, `get_document` converte a pagina em
+texto limpo para agentes de IA e preserva hash, tamanho, URL, tipo de origem e
+warnings nos metadados. Se a fonte retornar PDF puro, o provider registra o
+estado como nao parseado em vez de fingir que leu o conteudo.
+
 Rotas declaradas:
 
 ```text
@@ -117,7 +122,7 @@ publica quando a consulta for bloqueada.
 
 - [x] Criar fixture especifica para `diagnose_cjsg_access`.
 - [x] Criar fixture de zero resultado.
-- [ ] Criar fixture de inteiro teor publico com hash e tamanho.
+- [x] Criar fixture de inteiro teor publico com hash e tamanho.
 - [ ] Documentar variacoes de `classe/assunto` por area.
 - [ ] Promover dossie da familia CJSG/e-SAJ para ser reutilizado por TJAC,
   TJAL, TJAM e TJMS.

@@ -23,6 +23,7 @@ from nanojuris.models import (
     AccessStatus,
     CanonicalDocument,
     DecisionBundle,
+    ExtractionStatus,
     ExtractionTrace,
     JurisprudenceQuery,
     JurisprudenceResult,
@@ -110,6 +111,7 @@ class TjspCjsgProvider(JurisprudenceProvider):
         cd_acordao, cd_foro = self._parse_precedent_id(precedent_id)
         endpoint = f"/getArquivo.do?cdAcordao={cd_acordao}&cdForo={cd_foro}"
         content = self._request_text("GET", endpoint)
+        document_text, extraction_metadata = extract_cjsg_document_text(content)
         trace = SourceTrace(
             provider=self.name,
             endpoint="/getArquivo.do",
@@ -122,9 +124,21 @@ class TjspCjsgProvider(JurisprudenceProvider):
         return DecisionBundle(
             precedent_id=precedent_id,
             source=self.name,
-            texts=[{"content": content, "content_type": "text/html"}],
+            texts=[
+                {
+                    "content": document_text,
+                    "content_type": "text/plain",
+                    "source_content_type": "text/html",
+                }
+            ],
             source_trace=trace,
-            raw={"cd_acordao": cd_acordao, "cd_foro": cd_foro},
+            raw={
+                "cd_acordao": cd_acordao,
+                "cd_foro": cd_foro,
+                "raw_content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                "raw_content_bytes": len(content.encode("utf-8")),
+                **extraction_metadata,
+            },
         )
 
     def get_document(self, document_id: str) -> CanonicalDocument:
@@ -444,15 +458,19 @@ def cjsg_decision_bundle_to_document(
     """Convert a CJSG public getArquivo response into a canonical document."""
 
     content = str(bundle.texts[0].get("content") if bundle.texts else "")
-    content_type = str(bundle.texts[0].get("content_type") if bundle.texts else "text/html")
+    content_type = str(bundle.texts[0].get("content_type") if bundle.texts else "text/plain")
     content_bytes = content.encode("utf-8")
     metadata = dict(bundle.raw or {})
+    warnings = list(metadata.get("warnings") or [])
+    status = (
+        ExtractionStatus.COMPLETE if content.strip() and not warnings else ExtractionStatus.PARTIAL
+    )
     return CanonicalDocument(
         id=document_id,
         source=source,
         document_type="acordao",
         content_type=content_type,
-        title=title,
+        title=str(metadata.get("document_title") or title),
         text=content,
         url=bundle.source_trace.source_url if bundle.source_trace else None,
         sha256=hashlib.sha256(content_bytes).hexdigest(),
@@ -463,8 +481,10 @@ def cjsg_decision_bundle_to_document(
         extraction_trace=ExtractionTrace(
             parser=parser,
             parser_version="1",
+            status=status,
             content_sha256=hashlib.sha256(content_bytes).hexdigest(),
             content_bytes=len(content_bytes),
+            warnings=warnings,
             metadata=metadata,
         ),
         raw_metadata=metadata,
@@ -520,6 +540,71 @@ def _split_class_subject(value: str | None) -> tuple[str | None, str | None]:
 
 def _normalize_label(label: str) -> str:
     return re.sub(r"\s+", " ", label.replace(":", "")).strip().lower()
+
+
+def extract_cjsg_document_text(html: str) -> tuple[str, dict[str, Any]]:
+    """Extract readable text and audit metadata from a public CJSG document page."""
+
+    warnings: list[str] = []
+    stripped = html.strip()
+    if stripped.startswith("%PDF"):
+        warnings.append(
+            "CJSG returned PDF bytes; NanoJuris preserves metadata but does not parse PDF text yet."
+        )
+        return "", {
+            "document_title": "TJSP/CJSG inteiro teor em PDF",
+            "source_content_type": "application/pdf",
+            "text_characters": 0,
+            "warnings": warnings,
+        }
+
+    soup = BeautifulSoup(html, "html.parser")
+    for element in soup.select("script, style, noscript, iframe, object"):
+        element.decompose()
+    title = _document_title(soup)
+    candidates = [
+        "#documento",
+        "#divDocumento",
+        "#conteudoDocumento",
+        "#corpoDocumento",
+        ".documento",
+        ".inteiroTeor",
+        "body",
+    ]
+    text = ""
+    for selector in candidates:
+        candidate_element = soup.select_one(selector)
+        if candidate_element is None:
+            continue
+        text = _normalize_document_text(candidate_element.get_text("\n", strip=True))
+        if text:
+            break
+    if not text:
+        text = _normalize_document_text(soup.get_text("\n", strip=True))
+    lowered = text.lower()
+    if "captcha" in lowered or "recaptcha" in lowered:
+        warnings.append("CJSG document response contains captcha/access-control text.")
+    if len(text) < 120:
+        warnings.append("CJSG document text is unusually short for a full-text decision.")
+    return text, {
+        "document_title": title,
+        "source_content_type": "text/html",
+        "text_characters": len(text),
+        "warnings": warnings,
+    }
+
+
+def _document_title(soup: BeautifulSoup) -> str:
+    heading = soup.select_one("h1, h2, h3, title")
+    if heading is None:
+        return "TJSP/CJSG inteiro teor"
+    text = _normalize_document_text(heading.get_text(" ", strip=True))
+    return text or "TJSP/CJSG inteiro teor"
+
+
+def _normalize_document_text(text: str) -> str:
+    normalized_lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+    return "\n".join(line for line in normalized_lines if line)
 
 
 def _looks_like_access_control(html: str) -> bool:

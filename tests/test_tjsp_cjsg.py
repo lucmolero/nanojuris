@@ -6,11 +6,12 @@ import pytest
 import requests
 
 from nanojuris.errors import AccessControlRequiredError, ParserContractChangedError
-from nanojuris.models import JurisprudenceQuery, SourceTrace
+from nanojuris.models import ExtractionStatus, JurisprudenceQuery, SourceTrace
 from nanojuris.providers.tjsp_cjsg import (
     TjspCjsgProvider,
     decode_cjsg_response_text,
     diagnose_cjsg_access,
+    extract_cjsg_document_text,
     parse_cjsg_results,
 )
 
@@ -114,20 +115,25 @@ def test_provider_search_posts_cjsg_payload_and_parses_results():
     assert payload["dados.dtJulgamentoInicio"] == "01/01/2026"
 
 
-def test_provider_get_decisions_builds_getarquivo_url():
-    session = FakeSession([FakeResponse("<html>inteiro teor publico</html>")])
+def test_provider_get_decisions_builds_getarquivo_url_and_extracts_text():
+    session = FakeSession([FakeResponse(_fixture("tjsp_cjsg_document.html"))])
     provider = TjspCjsgProvider(session=session)
 
     bundle = provider.get_decisions("tjsp-cjsg-20787558-0")
 
     assert bundle.precedent_id == "tjsp-cjsg-20787558-0"
-    assert bundle.texts[0]["content"] == "<html>inteiro teor publico</html>"
+    assert bundle.texts[0]["content_type"] == "text/plain"
+    assert "Apelacao Criminal n. 0003938-14.2017.8.26.0323" in bundle.texts[0]["content"]
+    assert "window.analytics" not in bundle.texts[0]["content"]
+    assert bundle.raw["source_content_type"] == "text/html"
+    assert bundle.raw["text_characters"] > 120
+    assert bundle.raw["raw_content_sha256"]
     assert session.calls[0]["method"] == "GET"
     assert session.calls[0]["url"].endswith("getArquivo.do?cdAcordao=20787558&cdForo=0")
 
 
 def test_provider_get_document_returns_canonical_document():
-    session = FakeSession([FakeResponse("<html>inteiro teor publico</html>")])
+    session = FakeSession([FakeResponse(_fixture("tjsp_cjsg_document.html"))])
     provider = TjspCjsgProvider(session=session)
 
     document = provider.get_document("tjsp-cjsg-20787558-0")
@@ -135,11 +141,49 @@ def test_provider_get_document_returns_canonical_document():
     assert document.id == "tjsp-cjsg-20787558-0"
     assert document.source == "tjsp_cjsg"
     assert document.document_type == "acordao"
-    assert document.content_type == "text/html"
-    assert document.text == "<html>inteiro teor publico</html>"
+    assert document.content_type == "text/plain"
+    assert document.title == "Inteiro Teor - TJSP"
+    assert document.text is not None
+    assert "Homicidio qualificado" in document.text
     assert document.sha256 is not None
-    assert document.byte_size == len(b"<html>inteiro teor publico</html>")
-    assert document.raw_metadata == {"cd_acordao": "20787558", "cd_foro": "0"}
+    assert document.byte_size == len(document.text.encode("utf-8"))
+    assert document.extraction_trace is not None
+    assert document.extraction_trace.metadata["cd_acordao"] == "20787558"
+    assert document.raw_metadata["cd_foro"] == "0"
+
+
+def test_extract_cjsg_document_text_marks_pdf_as_unparsed():
+    text, metadata = extract_cjsg_document_text("%PDF-1.4 fake public bytes")
+
+    assert text == ""
+    assert metadata["source_content_type"] == "application/pdf"
+    assert metadata["warnings"] == [
+        "CJSG returned PDF bytes; NanoJuris preserves metadata but does not parse PDF text yet."
+    ]
+
+
+def test_extract_cjsg_document_text_marks_short_access_control_text():
+    text, metadata = extract_cjsg_document_text("<html><body>captcha</body></html>")
+
+    assert text == "captcha"
+    assert metadata["warnings"] == [
+        "CJSG document response contains captcha/access-control text.",
+        "CJSG document text is unusually short for a full-text decision.",
+    ]
+
+
+def test_provider_get_document_marks_short_document_as_partial():
+    session = FakeSession([FakeResponse("<html><body>curto</body></html>")])
+    provider = TjspCjsgProvider(session=session)
+
+    document = provider.get_document("tjsp-cjsg-20787558-0")
+
+    assert document.text == "curto"
+    assert document.extraction_trace is not None
+    assert document.extraction_trace.status == ExtractionStatus.PARTIAL
+    assert document.extraction_trace.warnings == [
+        "CJSG document text is unusually short for a full-text decision."
+    ]
 
 
 def test_provider_detects_access_control_without_bypass():

@@ -174,6 +174,11 @@ Parametros:
 Use para agentes que precisam anexar texto bruto auditavel, hash, tamanho,
 trace de fonte e status de acesso antes de qualquer etapa posterior.
 
+No `tjsp_cjsg`, a tool retorna o texto limpo extraido do HTML publico quando a
+rota `getArquivo.do` estiver acessivel. O HTML original nao e despejado no
+campo `text`; seus sinais de auditoria ficam em `raw_metadata`, como hash,
+tamanho, tipo de origem e warnings.
+
 ### `get_decisions`
 
 Recupera textos publicos vinculados ao identificador de uma fonte quando o

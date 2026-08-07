@@ -90,6 +90,12 @@ Pesquise "incidente de desconsideracao da personalidade juridica" nas fontes
 mais adequadas e traga os metadados principais.
 ```
 
+```text
+Rode uma demo de juridimetria sobre IDPJ. Use search_unified com tjdf_juris,
+trf4_eproc_jurisprudencia, tjsp_cjsg e stj_scon, page_size 3. Liste fontes
+consultadas, puladas, com erro e os primeiros campos objetivos retornados.
+```
+
 ## Como interpretar a busca unificada
 
 `search_unified` retorna tres grupos importantes:
@@ -127,6 +133,16 @@ Fontes estrategicas, mas que exigem mais cuidado:
 | `SourceUnavailableError` | A fonte retornou erro HTTP ou falha de rede. |
 | fonte em `skipped_sources` | A fonte nao era adequada para a pergunta. |
 | `total_returned=0` sem erro | A busca executou, mas nao encontrou resultados. |
+
+## Inteiro Teor Para Agentes
+
+Quando uma fonte expuser documento publico sem bypass, use `get_document`.
+O `tjsp_cjsg`, por exemplo, transforma o HTML publico de `getArquivo.do` em
+texto limpo para leitura pelo agente e preserva hash, tamanho, URL, trace e
+metadados tecnicos no payload.
+
+Se a fonte devolver PDF puro, captcha, login ou conteudo muito curto, o agente
+deve reportar o warning/status e nao tentar contornar a fonte.
 
 ## Prompt unico para instalacao assistida
 

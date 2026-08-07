@@ -29,7 +29,12 @@ Extrair inteiro teor publico quando a fonte disponibiliza o documento:
 ```python
 document = client.get_document("tjsp-cjsg-20787558-0", source="tjsp_cjsg")
 print(document.sha256, document.byte_size)
+print(document.text[:1000])
 ```
+
+No `tjsp_cjsg`, o documento canonico entrega texto limpo para leitura por
+agentes, mantendo hash, tamanho, URL, trace e metadados do HTML publico
+original.
 
 ## Use a CLI
 
@@ -97,6 +102,16 @@ print(get_court("tj-sp").name)
 print([court.code for court in list_courts(branch="state", state="SP")])
 print([court.code for court in list_courts(source_system="esaj_cjsg")])
 ```
+
+## Rode uma demo de juridimetria
+
+```bash
+python examples/idpj_jurimetry_demo.py
+```
+
+Essa demo pesquisa `incidente de desconsideracao da personalidade juridica`,
+resume fontes consultadas, fontes puladas, erros e uma amostra de campos uteis.
+Veja tambem [jurimetry-idpj-demo.md](jurimetry-idpj-demo.md).
 
 ## Use a camada de aquisicao
 
