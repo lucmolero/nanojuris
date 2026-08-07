@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 import time
+import unicodedata
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -45,12 +46,12 @@ class StjSconProvider(JurisprudenceProvider):
 
     def search(self, query: JurisprudenceQuery) -> SearchPage:
         endpoint = "/SCON/pesquisar.jsp"
-        payload = self._build_payload(query)
-        html = self._request_text("POST", endpoint, data=payload)
+        params = self._build_params(query)
+        html = self._request_text("GET", endpoint, params=params)
         trace = SourceTrace(
             provider=self.name,
             endpoint=endpoint,
-            query=payload,
+            query=params,
             source_url=urljoin(self.config.stj_scon_url.rstrip("/") + "/", endpoint.lstrip("/")),
             limitations=[
                 "Fonte HTML publica do STJ/SCON sujeita a mudancas de layout.",
@@ -62,7 +63,7 @@ class StjSconProvider(JurisprudenceProvider):
             html,
             query=query,
             trace=trace,
-            base_url=self.config.stj_url,
+            base_url=self.config.stj_scon_url,
         )
 
     def get_decisions(self, precedent_id: str) -> DecisionBundle:
@@ -100,18 +101,18 @@ class StjSconProvider(JurisprudenceProvider):
                 AccessStatus.ACCESS_CONTROL_REQUIRED,
                 AccessStatus.SOURCE_UNAVAILABLE,
             ],
-            endpoints=["POST /SCON/pesquisar.jsp"],
+            endpoints=["GET /SCON/pesquisar.jsp"],
             supports_full_text=False,
             supports_catalog=False,
             supports_suggestions=False,
             supports_live_tests=True,
             limitations=[
-                "Primeira versao foca acordaos SCON e fixtures offline.",
+                "Busca principal mapeada por HAR publico como GET /SCON/pesquisar.jsp.",
                 (
                     "Inteiro teor sera ampliado em etapa posterior quando "
                     "a URL publica responder sem controle de acesso."
                 ),
-                "A fonte pode usar parametros HTML/sessao volateis.",
+                "Sessao limpa em ambiente automatizado pode receber verificacao Cloudflare/STJ.",
             ],
             responsible_use=[
                 "Nao tentar contornar captcha, login ou controles de acesso.",
@@ -123,13 +124,34 @@ class StjSconProvider(JurisprudenceProvider):
             ],
         )
 
-    def _build_payload(self, query: JurisprudenceQuery) -> dict[str, str | int]:
-        return {
+    def _build_params(self, query: JurisprudenceQuery) -> dict[str, str | int]:
+        params: dict[str, str | int] = {
             "b": "ACOR",
+            "p": "true",
+            "l": query.page_size,
+            "i": query.page,
+            "ordenacao": self._map_order_by(query.order_by),
+            "thesaurus": "JURIDICO",
             "O": "JT",
-            "livre": query.text,
-            "num_processo": query.number,
         }
+        if query.text:
+            params["livre"] = query.text
+        if query.number:
+            params["processo"] = query.number
+        return params
+
+    @staticmethod
+    def _map_order_by(value: str) -> str:
+        normalized = value.strip().lower()
+        mapping = {
+            "text": "-@DOCN",
+            "relevance": "-@DOCN",
+            "document": "-@DOCN",
+            "date": "-@DTPB",
+            "publication": "-@DTPB",
+            "dtpublicacao": "-@DTPB",
+        }
+        return mapping.get(normalized, value or "-@DOCN")
 
     def _request_text(self, method: str, path: str, **kwargs: Any) -> str:
         self._respect_rate_limit()
@@ -188,7 +210,15 @@ def parse_stj_scon_results(
         raise AccessControlRequiredError("STJ/SCON returned captcha/access-control HTML")
 
     soup = BeautifulSoup(html, "html.parser")
+    real_items = soup.select(".documento")
     result_root = soup.select_one("#resultados") or soup.select_one(".resultados")
+    if result_root is None and real_items:
+        return _parse_stj_document_items(
+            real_items,
+            query=query,
+            trace=trace,
+            base_url=base_url,
+        )
     if result_root is None:
         if "resultado" in html.lower() and "nenhum" in html.lower():
             return SearchPage(
@@ -262,6 +292,115 @@ def parse_stj_scon_results(
     )
 
 
+def _parse_stj_document_items(
+    items: list[Any],
+    *,
+    query: JurisprudenceQuery,
+    trace: SourceTrace,
+    base_url: str,
+) -> SearchPage:
+    total = _parse_document_total(items)
+    results: list[JurisprudenceResult] = []
+    for index, item in enumerate(items, start=1):
+        fields = _extract_stj_document_fields(item)
+        identification = _text(item, ".clsIdentificacaoDocumento")
+        case_number = fields.get("processo") or identification
+        registry_number = _extract_stj_registry(item)
+        document_url = _extract_stj_document_url(item, base_url=base_url)
+        if not case_number and not registry_number:
+            continue
+        result_trace = SourceTrace(
+            provider=trace.provider,
+            endpoint=trace.endpoint,
+            query=trace.query,
+            source_url=document_url or trace.source_url,
+            limitations=trace.limitations,
+        )
+        publication = fields.get("data da publicacao/fonte")
+        result = JurisprudenceResult(
+            id=f"stj-scon-{registry_number or index}",
+            source="stj_scon",
+            court="STJ",
+            type="acordao",
+            number=case_number,
+            summary=fields.get("ementa"),
+            rapporteur=fields.get("relator"),
+            updated_at=_extract_date(publication) or fields.get("data do julgamento"),
+            highlights={},
+            source_trace=result_trace,
+            raw={
+                "classe": identification,
+                "registro": registry_number,
+                "registry_number": registry_number,
+                "orgao_julgador": fields.get("orgao julgador"),
+                "data_julgamento": fields.get("data do julgamento"),
+                "data_publicacao": publication,
+                "document_url": document_url,
+                "fields": fields,
+            },
+        )
+        results.append(result)
+
+    if not results and total > 0:
+        raise ParserContractChangedError("STJ/SCON parser found total results but no items")
+    limited_results = results[: query.page_size]
+    return SearchPage(
+        source="stj_scon",
+        total=total or len(results),
+        start=1 if results else 0,
+        end=len(limited_results),
+        page=query.page,
+        page_size=query.page_size,
+        results=limited_results,
+        source_trace=trace,
+    )
+
+
+def _extract_stj_document_fields(item: Any) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for paragraph in item.select(".paragrafoBRS"):
+        title = _normalize_label(_text(paragraph, ".docTitulo"))
+        value = _normalize_spaces(_text(paragraph, ".docTexto"))
+        if title and value:
+            fields[title] = value
+    return fields
+
+
+def _extract_stj_registry(item: Any) -> str:
+    for anchor in item.select("a[href]"):
+        href = unquote(str(anchor.get("href") or ""))
+        match = re.search(r"num_registro=(\d+)", href)
+        if match:
+            return match.group(1)
+    return ""
+
+
+def _extract_stj_document_url(item: Any, *, base_url: str) -> str | None:
+    for anchor in item.select("a[href]"):
+        href = unquote(str(anchor.get("href") or ""))
+        match = re.search(r"inteiro_teor\('([^']+)'\)", href)
+        if match:
+            return urljoin(base_url.rstrip("/") + "/", match.group(1).lstrip("/"))
+        if "GetInteiroTeorDoAcordao" in href:
+            return urljoin(base_url.rstrip("/") + "/", href.lstrip("/"))
+    return None
+
+
+def _parse_document_total(items: list[Any]) -> int:
+    if not items:
+        return 0
+    text = _normalize_spaces(_text(items[0], ".clsNumDocumento"))
+    match = re.search(r"Documento\s+\d+\s+de\s+(\d+)", text, re.I)
+    return int(match.group(1)) if match else len(items)
+
+
+def _extract_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"\d{2}/\d{2}/\d{4}", value)
+    return match.group(0) if match else value
+
+
 def _parse_pagination(text: str) -> tuple[int, int, int]:
     match = re.search(r"Resultados\s+(\d+)\s+a\s+(\d+)\s+de\s+(\d+)", text, re.I)
     if not match:
@@ -273,6 +412,16 @@ def _parse_pagination(text: str) -> tuple[int, int, int]:
 def _text(item: Any, selector: str) -> str:
     element = item.select_one(selector)
     return element.get_text(" ", strip=True) if element else ""
+
+
+def _normalize_label(label: str) -> str:
+    normalized = unicodedata.normalize("NFKD", label.replace(":", ""))
+    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+    return _normalize_spaces(without_accents).lower()
+
+
+def _normalize_spaces(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _extract_registry(anchor: Any) -> str:
@@ -288,6 +437,10 @@ def _looks_like_access_control(html: str) -> bool:
     if 'id="resultados"' in lowered or 'class="documento"' in lowered:
         return False
     if "challenge-error-text" in lowered or "cf-error" in lowered:
+        return True
+    if "verificação automática" in lowered or "verificacao automatica" in lowered:
+        return True
+    if "enable javascript and cookies to continue" in lowered:
         return True
     if "g-recaptcha" in lowered or "recaptcha_response_token" in lowered:
         return True

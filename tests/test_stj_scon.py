@@ -74,7 +74,37 @@ def test_parse_stj_scon_results_maps_fixture():
     )
 
 
-def test_provider_search_gets_scon_payload_and_parses_results():
+def test_parse_stj_scon_results_maps_real_har_shape_fixture():
+    trace = SourceTrace(provider="stj_scon", endpoint="/SCON/pesquisar.jsp")
+
+    page = parse_stj_scon_results(
+        _fixture("stj_scon_real_documentos.html"),
+        query=JurisprudenceQuery(text="publicidade criancas", page_size=2),
+        trace=trace,
+        base_url="https://scon.stj.jus.br",
+    )
+
+    assert page.source == "stj_scon"
+    assert page.total == 2
+    assert page.start == 1
+    assert page.end == 2
+    first = page.results[0]
+    assert first.id == "stj-scon-201600171682"
+    assert first.number == "REsp 1613561 / SP RECURSO ESPECIAL 2016/0017168-2"
+    assert first.rapporteur == "Ministro HERMAN BENJAMIN (1132)"
+    assert first.updated_at == "01/09/2020"
+    assert first.raw["classe"] == "RESP 1613561"
+    assert first.raw["registry_number"] == "201600171682"
+    assert first.raw["orgao_julgador"] == "T2 - SEGUNDA TURMA"
+    assert first.raw["data_julgamento"] == "25/04/2017"
+    assert first.raw["data_publicacao"] == "DJe 01/09/2020"
+    assert first.raw["document_url"] == (
+        "https://scon.stj.jus.br/SCON/GetInteiroTeorDoAcordao?"
+        "num_registro=201600171682&dt_publicacao=01/09/2020"
+    )
+
+
+def test_provider_search_gets_scon_params_and_parses_results():
     session = FakeSession([FakeResponse(_fixture_html())])
     provider = StjSconProvider(session=session)
 
@@ -89,13 +119,18 @@ def test_provider_search_gets_scon_payload_and_parses_results():
 
     assert page.results[0].id == "stj-scon-202400123456"
     call = session.calls[0]
-    assert call["method"] == "POST"
+    assert call["method"] == "GET"
     assert call["url"] == "https://scon.stj.jus.br/SCON/pesquisar.jsp"
-    assert call["kwargs"]["data"] == {
+    assert call["kwargs"]["params"] == {
         "b": "ACOR",
+        "p": "true",
+        "l": 5,
+        "i": 2,
+        "ordenacao": "-@DOCN",
+        "thesaurus": "JURIDICO",
         "O": "JT",
         "livre": "recurso especial",
-        "num_processo": "1234567/SP",
+        "processo": "1234567/SP",
     }
 
 
@@ -104,6 +139,7 @@ def test_provider_capabilities_describe_stj_scon_contract():
 
     assert capabilities.source == "stj_scon"
     assert capabilities.source_url == "https://processo.stj.jus.br/SCON/acordaos/"
+    assert capabilities.endpoints == ["GET /SCON/pesquisar.jsp"]
     assert capabilities.canonical_records == ["CanonicalDecision"]
     assert "stj_query_language" in capabilities.search_modes
     assert "document_url" in capabilities.extracted_fields
@@ -157,6 +193,18 @@ def test_provider_detects_access_control_without_bypass():
 
 def test_provider_detects_stj_challenge_without_bypass():
     session = FakeSession([FakeResponse("<html><div id='challenge-error-text'></div></html>", 403)])
+    provider = StjSconProvider(session=session)
+
+    with pytest.raises(AccessControlRequiredError):
+        provider.search(JurisprudenceQuery(text="teste"))
+
+
+def test_provider_detects_stj_automatic_verification_without_bypass():
+    html = (
+        "<html><body>Verificacao automatica em andamento. "
+        "Enable JavaScript and cookies to continue</body></html>"
+    )
+    session = FakeSession([FakeResponse(html, 403)])
     provider = StjSconProvider(session=session)
 
     with pytest.raises(AccessControlRequiredError):

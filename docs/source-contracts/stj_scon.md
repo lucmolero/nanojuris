@@ -7,22 +7,33 @@
 - Familia tecnica: `html_jurisprudencia_superior`.
 - Uso preferencial: acordaos do STJ quando a pagina publica responder sem
   validacao de acesso.
-- Nivel atual esperado: 2.
+- Nivel atual esperado: 3.
 
 ## Contrato conhecido
 
-O provider atual envia `POST /SCON/pesquisar.jsp` para a base de acordaos. O
-escopo v1 cobre lista de resultados e parser offline por fixture HTML
-sanitizada. O inteiro teor ainda nao foi promovido como contrato estavel.
+O HAR publico analisado em 06/08/2026 mostrou que a busca principal de acordaos
+usa `GET /SCON/pesquisar.jsp` com parametros na query string. O escopo atual
+cobre lista de resultados, parser por fixture HTML sanitizada e parser da
+estrutura real `.documento` observada no HAR. O inteiro teor ainda nao foi
+promovido como contrato estavel.
 
-Payload declarado pelo provider:
+Parametros principais declarados pelo provider:
 
 ```text
 b=ACOR
+p=true
+l=<page_size>
+i=<page>
+ordenacao=-@DOCN
+thesaurus=JURIDICO
 O=JT
-livre=<texto livre do usuario>
-num_processo=<numero quando informado>
+livre=<texto livre quando informado>
+processo=<numero quando informado>
 ```
+
+Observacao: o HAR recebido tambem continha `preConsultaPP=<id>` para uma
+pesquisa pronta especifica. Esse parametro e tratado como contexto da pagina
+navegada, nao como contrato geral para busca textual livre.
 
 Campos extraidos quando o HTML segue o contrato esperado:
 
@@ -36,6 +47,17 @@ Campos extraidos quando o HTML segue o contrato esperado:
 - ementa/resumo;
 - URL oficial do documento quando houver link no resultado.
 
+Seletores principais observados no HTML real:
+
+| Campo | Seletor/Padrao |
+| --- | --- |
+| Item de resultado | `.documento` |
+| Cabecalho do item | `.clsHeaderDocumento` |
+| Identificacao curta | `.clsIdentificacaoDocumento` |
+| Pares campo/valor | `.paragrafoBRS` com `.docTitulo` e `.docTexto` |
+| Inteiro teor | `javascript:inteiro_teor('/SCON/GetInteiroTeorDoAcordao?...')` |
+| Processo relacionado | `javascript:processo('https://processo.stj.jus.br/processo/pesquisa/?num_registro=...')` |
+
 ## Estados de resposta
 
 | Estado | Como o provider deve tratar |
@@ -43,22 +65,37 @@ Campos extraidos quando o HTML segue o contrato esperado:
 | Resultado publico | Retornar `SearchPage` com `CanonicalDecision` derivavel. |
 | Zero resultado | Retornar `SearchPage` vazia quando o HTML indicar ausencia de resultado. |
 | Captcha/controle de acesso | Levantar `AccessControlRequiredError`. |
+| Verificacao automatica STJ/Cloudflare | Levantar `AccessControlRequiredError`; nao tentar bypass. |
 | HTTP 429 | Levantar `RateLimitDetectedError`. |
 | HTTP 5xx | Levantar `SourceUnavailableError`. |
 | HTML sem container esperado | Levantar `ParserContractChangedError`. |
 
+## Teste De Conexao Limpa
+
+Em 06/08/2026, uma sessao limpa sem cookies foi testada contra:
+
+```text
+GET /SCON/pesquisar.jsp?b=ACOR&p=true&l=10&i=1&ordenacao=-@DOCN&thesaurus=JURIDICO&livre=publicidade+alimentos+criancas&O=JT
+```
+
+Resultado observado a partir deste ambiente: HTTP 403 com mensagem de
+verificacao automatica e exigencia de JavaScript/cookies. Esse estado e
+esperado em ambientes automatizados e deve ser reportado pelo provider sem
+contorno.
+
 ## Pontos fortes
 
 - Fonte institucional de alto valor para jurisprudencia superior.
-- Parser ja preserva `SourceTrace` e campos objetivos.
+- Parser preserva `SourceTrace` e campos objetivos.
+- Parser cobre tanto a fixture simplificada quanto a estrutura real `.documento`
+  observada no HAR.
 - O provider evita reinterpretar operadores oficiais do STJ.
 
 ## Lacunas a aprofundar
 
-- Mapear fluxo publico SCON com HAR limpo e parametros minimos.
 - Separar acordaos, monocraticas, sumulas e informativos como superficies
   tecnicas diferentes.
-- Adicionar fixtures de acesso controlado e busca vazia.
+- Ampliar fixtures de monocraticas, sumulas e informativos.
 - Validar URL publica de inteiro teor antes de promover `get_document`.
 - Documentar operadores oficiais com exemplos seguros.
 
@@ -75,6 +112,7 @@ Recomendacao: fonte estrategica, mas ainda inicial. O agente deve:
 ## Fixtures esperadas
 
 - `tests/fixtures/stj_scon_acordaos_result.html` implementada;
+- `tests/fixtures/stj_scon_real_documentos.html` implementada;
 - `tests/fixtures/stj_scon_access_control.html` implementada;
 - `tests/fixtures/stj_scon_empty.html` implementada;
 - futura fixture de inteiro teor publico, somente se a URL responder sem
@@ -82,8 +120,10 @@ Recomendacao: fonte estrategica, mas ainda inicial. O agente deve:
 
 ## Proximos passos
 
-- [ ] Capturar HAR publico limpo de busca simples.
-- [ ] Reduzir headers ao minimo necessario.
-- [ ] Documentar parametros obrigatorios/opcionais em detalhe.
+- [x] Capturar HAR publico limpo de busca simples.
+- [x] Reduzir headers ao minimo necessario.
+- [x] Documentar parametros obrigatorios/opcionais em detalhe.
 - [x] Adicionar fixtures de acesso controlado e vazio.
-- [ ] Reavaliar nivel de contrato para 3 quando o dossie HTTP estiver completo.
+- [x] Reavaliar nivel de contrato para 3 quando o dossie HTTP estiver completo.
+- [ ] Criar teste live opt-in para registrar `AccessControlRequiredError` quando
+  a origem exigir verificacao automatica.

@@ -71,15 +71,17 @@ SOURCE_OVERRIDES: dict[str, dict[str, Any]] = {
         ],
     },
     "stj_scon": {
-        "contract_level": 2,
+        "contract_level": 3,
         "source_family": "html_jurisprudencia_superior",
-        "mcp_recommendation": "Use como provider inicial; trate controle de acesso como esperado.",
+        "mcp_recommendation": (
+            "Use com page_size pequeno e reporte verificacao automatica sem bypass."
+        ),
         "jurimetry_fit": "alto quando o contrato de acesso estiver estabilizado.",
         "risk_level": "alto",
         "gaps": [
-            "Mapear fluxo publico SCON com HAR limpo e parametros minimos.",
-            "Separar acesso bloqueado de ausencia de resultados.",
-            "Promover fixtures de acordaos, monocraticas, sumulas e informativos.",
+            "Separar acesso bloqueado por verificacao automatica de ausencia de resultados.",
+            "Validar URL publica de inteiro teor em sessao limpa sem cookies.",
+            "Promover fixtures de monocraticas, sumulas e informativos.",
         ],
     },
     "stm_jurisprudencia": {
