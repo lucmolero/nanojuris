@@ -19,6 +19,7 @@ from nanojuris.canonical import (
 )
 from nanojuris.client import NanoJurisClient
 from nanojuris.config import NanoJurisConfig
+from nanojuris.errors import NetworkConfigurationError
 from nanojuris.extraction import FetchedContent, FetchRequest, HttpFetcher, ParsedContent
 from nanojuris.models import (
     AccessStatus,
@@ -71,6 +72,7 @@ __all__ = [
     "list_courts",
     "NanoJurisClient",
     "NanoJurisConfig",
+    "NetworkConfigurationError",
     "normalize_court_code",
     "ParadigmCase",
     "ParsedContent",

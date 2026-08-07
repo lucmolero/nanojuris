@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from nanojuris.config import NanoJurisConfig
+from nanojuris.config import NanoJurisConfig, configure_requests_session
 from nanojuris.errors import (
     AccessControlRequiredError,
     RateLimitDetectedError,
@@ -45,7 +45,7 @@ class Trf4EprocJurisprudenciaProvider(JurisprudenceProvider):
         session: requests.Session | None = None,
     ) -> None:
         self.config = config or NanoJurisConfig()
-        self.session = session or requests.Session()
+        self.session = configure_requests_session(session or requests.Session(), self.config)
         self._last_request = 0.0
 
     def search(self, query: JurisprudenceQuery) -> SearchPage:

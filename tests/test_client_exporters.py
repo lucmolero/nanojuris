@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import requests
 
 from nanojuris.canonical import (
     result_to_canonical_decision,
@@ -8,7 +9,8 @@ from nanojuris.canonical import (
     search_page_to_canonical,
 )
 from nanojuris.client import NanoJurisClient
-from nanojuris.errors import UnsupportedProviderError
+from nanojuris.config import NanoJurisConfig
+from nanojuris.errors import SourceUnavailableError, UnsupportedProviderError
 from nanojuris.exporters import (
     decisions_to_csv,
     documents_to_csv,
@@ -36,6 +38,7 @@ from nanojuris.models import (
     SourceTrace,
 )
 from nanojuris.providers.base import JurisprudenceProvider
+from nanojuris.providers.bnp_pangea import BnpPangeaProvider
 from nanojuris.store import SQLiteStore
 
 
@@ -114,6 +117,25 @@ class FailingProvider:
             source="failing",
             display_name="Fonte Falha",
             source_url="https://example.test/failing",
+            category="court_jurisprudence",
+            search_modes=["text"],
+            canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
+        )
+
+
+class ProxyFailingProvider:
+    name = "proxy_failing"
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        proxy_error = requests.exceptions.ProxyError("Unable to connect to proxy")
+        raise SourceUnavailableError("provider request failed") from proxy_error
+
+    def get_capabilities(self):
+        return ProviderCapabilities(
+            source="proxy_failing",
+            display_name="Fonte com proxy local invalido",
+            source_url="https://example.test/proxy",
             category="court_jurisprudence",
             search_modes=["text"],
             canonical_records=["CanonicalDecision"],
@@ -231,6 +253,49 @@ def test_client_search_many_unifies_results_and_keeps_source_errors():
             "message": "fonte indisponivel",
         },
     ]
+
+
+def test_client_search_many_classifies_proxy_configuration_errors():
+    client = NanoJurisClient(providers=[ProxyFailingProvider()])
+
+    payload = client.search_many("incidente", sources=["proxy_failing"])
+
+    assert payload["total_returned"] == 0
+    assert payload["errors"] == [
+        {
+            "source": "proxy_failing",
+            "error_type": "NetworkConfigurationError",
+            "message": (
+                "A configuracao local de proxy impediu a conexao com a fonte publica. "
+                "A busca foi roteada corretamente, mas nao conseguiu acessar a internet."
+            ),
+            "hint": (
+                "Verifique HTTP_PROXY, HTTPS_PROXY, ALL_PROXY ou rode o Studio com "
+                "--ignore-env-proxy quando o proxy local estiver invalido."
+            ),
+        }
+    ]
+    assert payload["routing_summary"] == [
+        {
+            "source": "proxy_failing",
+            "action": "failed",
+            "reason": "NetworkConfigurationError",
+            "message": (
+                "A configuracao local de proxy impediu a conexao com a fonte publica. "
+                "A busca foi roteada corretamente, mas nao conseguiu acessar a internet."
+            ),
+        }
+    ]
+
+
+def test_config_can_disable_requests_environment_proxy(monkeypatch):
+    monkeypatch.setenv("NANOJURIS_TRUST_ENV", "0")
+
+    config = NanoJurisConfig()
+    provider = BnpPangeaProvider(config)
+
+    assert config.trust_env is False
+    assert provider.session.trust_env is False
 
 
 def test_client_search_many_reports_skipped_sources_by_semantic_reason():

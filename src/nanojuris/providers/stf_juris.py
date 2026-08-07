@@ -9,7 +9,7 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 
-from nanojuris.config import NanoJurisConfig
+from nanojuris.config import NanoJurisConfig, configure_requests_session
 from nanojuris.errors import (
     AccessControlRequiredError,
     ParserContractChangedError,
@@ -98,7 +98,7 @@ class StfJurisProvider(JurisprudenceProvider):
         session: requests.Session | None = None,
     ) -> None:
         self.config = config or NanoJurisConfig()
-        self.session = session or requests.Session()
+        self.session = configure_requests_session(session or requests.Session(), self.config)
 
     def search(self, query: JurisprudenceQuery) -> SearchPage:
         endpoint = "/api/search/search"

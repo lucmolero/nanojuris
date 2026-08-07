@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from nanojuris.config import NanoJurisConfig
+from nanojuris.config import NanoJurisConfig, configure_requests_session
 from nanojuris.errors import (
     ParserContractChangedError,
     RateLimitDetectedError,
@@ -42,7 +42,7 @@ class TjspNugepnacProvider(JurisprudenceProvider):
         session: requests.Session | None = None,
     ) -> None:
         self.config = config or NanoJurisConfig()
-        self.session = session or requests.Session()
+        self.session = configure_requests_session(session or requests.Session(), self.config)
         self._last_request = 0.0
 
     def search(self, query: JurisprudenceQuery) -> SearchPage:

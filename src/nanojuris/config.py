@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(slots=True)
@@ -11,6 +13,7 @@ class NanoJurisConfig:
 
     timeout: float = 20.0
     verify_ssl: bool = True
+    trust_env: bool = field(default_factory=lambda: _env_bool("NANOJURIS_TRUST_ENV", True))
     user_agent: str = "NanoJuris/0.1 (+https://github.com/lucmolero/nanojuris)"
     bnp_api_url: str = "https://pangeabnp.pdpj.jus.br/api/v1"
     comunica_pje_url: str = "https://comunicaapi.pje.jus.br"
@@ -43,3 +46,18 @@ class NanoJurisConfig:
     tjgo_projudi_url: str = "https://projudi.tjgo.jus.br"
     tjpi_juspi_url: str = "https://jurisprudencia.tjpi.jus.br"
     rate_limit_interval: float = 0.0
+
+
+def configure_requests_session(session: Any, config: NanoJurisConfig) -> Any:
+    """Apply shared HTTP configuration to a requests-compatible session."""
+
+    if hasattr(session, "trust_env"):
+        session.trust_env = config.trust_env
+    return session
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}

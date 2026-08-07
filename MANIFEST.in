@@ -10,3 +10,11 @@ recursive-include examples *.py
 recursive-include tests *.py
 recursive-include tests/fixtures *.json
 recursive-include tests/fixtures *.html
+recursive-include src/nanojuris/web/static *.html
+recursive-include src/nanojuris/web/static/assets *.css
+recursive-include src/nanojuris/web/static/assets *.js
+recursive-include src/nanojuris/web/static/assets *.svg
+recursive-include frontend *.html
+recursive-include frontend *.json
+recursive-include frontend/src *.tsx
+recursive-include frontend/src *.css

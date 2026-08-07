@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 
-from nanojuris.config import NanoJurisConfig
+from nanojuris.config import NanoJurisConfig, configure_requests_session
 from nanojuris.errors import (
     ParserContractChangedError,
     RateLimitDetectedError,
@@ -39,7 +39,7 @@ class BnpPangeaProvider(JurisprudenceProvider):
         session: requests.Session | None = None,
     ) -> None:
         self.config = config or NanoJurisConfig()
-        self.session = session or requests.Session()
+        self.session = configure_requests_session(session or requests.Session(), self.config)
         self._last_request = 0.0
 
     def get_parameters(self) -> dict[str, Any]:

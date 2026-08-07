@@ -57,6 +57,7 @@ class ProviderCapabilities:
     supports_suggestions: bool = False
     supports_live_tests: bool = False
     supports_mcp: bool = True
+    supported_filters: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     responsible_use: list[str] = field(default_factory=list)
 

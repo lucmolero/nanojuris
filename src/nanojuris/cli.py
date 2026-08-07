@@ -99,6 +99,16 @@ def build_parser() -> argparse.ArgumentParser:
     fontes = sub.add_parser("fontes", help="Listar fontes e capacidades declaradas")
     fontes.add_argument("--fonte", default="", help="Detalhar apenas um provider")
 
+    studio = sub.add_parser("studio", help="Iniciar o NanoJuris Studio local")
+    studio.add_argument("--host", default="127.0.0.1")
+    studio.add_argument("--port", type=int, default=8765)
+    studio.add_argument("--no-browser", action="store_true")
+    studio.add_argument(
+        "--ignore-env-proxy",
+        action="store_true",
+        help="Ignorar HTTP_PROXY/HTTPS_PROXY/ALL_PROXY herdados do ambiente local.",
+    )
+
     diagnostico = sub.add_parser(
         "diagnostico",
         help="Exibir diagnostico de capacidades e limites de uma fonte",
@@ -338,6 +348,16 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(sources_payload, ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "studio":
+            from nanojuris.web.server import main as studio_main
+
+            studio_args = ["--host", args.host, "--port", str(args.port)]
+            if args.no_browser:
+                studio_args.append("--no-browser")
+            if args.ignore_env_proxy:
+                studio_args.append("--ignore-env-proxy")
+            return studio_main(studio_args)
 
         if args.command == "diagnostico":
             capability = client.get_capabilities(source=args.fonte)

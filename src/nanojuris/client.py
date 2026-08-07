@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -398,9 +399,65 @@ class NanoJurisClient:
             ) from exc
 
 
+@dataclass(frozen=True, slots=True)
+class _ErrorClassification:
+    error_type: str
+    message: str
+    hint: str
+
+
 def _source_error(source: str, exc: Exception) -> dict[str, str]:
-    return {
+    classified = _classify_error(exc)
+    payload = {
         "source": source,
-        "error_type": type(exc).__name__,
-        "message": str(exc),
+        "error_type": classified.error_type,
+        "message": classified.message,
     }
+    if classified.hint:
+        payload["hint"] = classified.hint
+    return payload
+
+
+def _classify_error(exc: Exception) -> _ErrorClassification:
+    chain_text = " | ".join(str(item) for item in _exception_chain(exc))
+    lowered = chain_text.lower()
+    if "proxyerror" in lowered or "unable to connect to proxy" in lowered:
+        return _ErrorClassification(
+            error_type="NetworkConfigurationError",
+            message=(
+                "A configuracao local de proxy impediu a conexao com a fonte publica. "
+                "A busca foi roteada corretamente, mas nao conseguiu acessar a internet."
+            ),
+            hint=(
+                "Verifique HTTP_PROXY, HTTPS_PROXY, ALL_PROXY ou rode o Studio com "
+                "--ignore-env-proxy quando o proxy local estiver invalido."
+            ),
+        )
+    if "ssl" in lowered and ("certificate" in lowered or "certificado" in lowered):
+        return _ErrorClassification(
+            error_type="SslVerificationError",
+            message=(
+                "A verificacao SSL local impediu a conexao com a fonte publica. "
+                "Isso costuma indicar cadeia de certificados ausente ou interceptacao corporativa."
+            ),
+            hint=(
+                "Atualize os certificados do ambiente. Para diagnostico controlado, use "
+                "--sem-verificar-ssl apenas em probe-rota."
+            ),
+        )
+    return _ErrorClassification(
+        error_type=type(exc).__name__,
+        message=str(exc),
+        hint="",
+    )
+
+
+def _exception_chain(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        chain.append(current)
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return chain

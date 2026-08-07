@@ -11,6 +11,10 @@ class SourceUnavailableError(NanoJurisError):
     """Raised when a public source is unavailable or returns an invalid response."""
 
 
+class NetworkConfigurationError(SourceUnavailableError):
+    """Raised when local network or proxy configuration blocks a public source."""
+
+
 class AccessControlRequiredError(NanoJurisError):
     """Raised when a source requires login, captcha or another access control."""
 
