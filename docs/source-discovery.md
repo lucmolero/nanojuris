@@ -312,7 +312,7 @@ busca geral de acordaos.
 | TJSP/CJSG GET com termo | HTTP 200, termo ecoado, mas `captcha`, `recaptcha` e `login` presentes | acesso controlado; nao promover por esse GET |
 | STJ/SCON GET | HTTP 403 com verificacao automatica/JavaScript/cookies | acesso controlado sem bypass |
 | DataJud/CNJ API publica | HTTP 401, `missing authentication credentials`, aceita Basic/Bearer/ApiKey | requer credencial/APIKey |
-| STF jurisprudencia SPA | falha local de certificado SSL com `requests`; teste diagnostico sem verify retornou 202 e corpo vazio | inconclusivo; precisa ficha tecnica propria |
+| STF jurisprudencia SPA | HAR posterior revelou `POST /api/search/search`; teste limpo ainda encontrou SSL/WAF HTTP 202 | provider inicial `stf_juris` implementado com fixture e diagnostico sem bypass |
 | BNP/Pangea termos criminais | HTTP 400 para `infanticidio`/`homicidio`, embora outros termos funcionem | aprofundar validacao de payload/diagnostico |
 | TJMS/CJSG data de publicacao | `dados.dtPublicacaoInicio/Fim=01/01/1900..31/12/2099` zerou busca que sem data retornou 22 resultados | nao promover sem novo contrato validado |
 | TST jurisprudencia SPA | `https://jurisprudencia.tst.jus.br/config.json` retorna `base_url=https://jurisprudencia-backend2.tst.jus.br`; `POST /rest/pesquisa-textual/1/2` responde JSON quando payload nao filtra, mas campos reais da SPA (`e`, `ou`, `termoExato`, `ementa`) retornaram HTTP 400 com corpo vazio | candidato tecnico; precisa reproduzir payload exato da SPA antes de provider |

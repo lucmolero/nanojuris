@@ -667,6 +667,48 @@ Pesquisa tecnica: [stj-provider-research.md](stj-provider-research.md).
 
 A primeira pesquisa tecnica para o STJ esta em [stj-provider-research.md](stj-provider-research.md). Ela separa os fluxos de SCON, precedentes qualificados e publicacoes, define criterios de fixture e marca o escopo inicial como SCON para acordaos.
 
+## `stf_juris`
+
+Provider inicial para acordaos publicos do STF por API JSON observada no
+frontend oficial de jurisprudencia.
+
+Escopo atual:
+
+```text
+POST /api/search/search
+```
+
+O provider declara capabilities, possui fixture JSON sanitizada, normaliza
+resultados para `JurisprudenceResult` e gera `CanonicalDecision`.
+
+Campos extraidos no contrato inicial:
+
+```text
+case_number
+registry_id
+decision_type
+case_class
+rapporteur
+judging_body
+judgment_date
+publication_date
+summary
+full_text_url
+process_url
+is_repercussao_geral
+highlights
+```
+
+Limitacoes:
+
+- a API limpa pode retornar AWS WAF challenge HTTP 202;
+- alguns ambientes podem falhar na validacao SSL do dominio;
+- inteiro teor do portal STF fica como URL ate responder sem HTTP 403 em sessao
+  limpa;
+- nao ha bypass de WAF, captcha, cookies ou desafios JavaScript.
+
+Ficha publica: [source-contracts/stf_juris.md](source-contracts/stf_juris.md).
+
 ## `tjsp_cjsg`
 
 Provider para a Consulta de Jurisprudencia do TJSP/CJSG.

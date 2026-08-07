@@ -210,5 +210,6 @@ live devem permanecer bloqueadas se exigirem verificacao automatica/captcha.
    tribunais.
 6. `stf_bnp_repercussao_geral`: documentar/embrulhar a cobertura STF ja
    disponivel via `bnp_pangea` quando o usuario pedir precedentes STF.
-7. `stf_jurisprudencia`: manter em discovery ate surgir API publica limpa sem
-   WAF/captcha/token voluvel.
+7. `stf_juris`: provider inicial por API JSON observada em HAR; manter
+   diagnostics-first ate existir acesso publico limpo sem WAF/captcha/token
+   voluvel e promover inteiro teor somente quando o portal nao retornar 403.

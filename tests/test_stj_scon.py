@@ -139,7 +139,12 @@ def test_provider_capabilities_describe_stj_scon_contract():
 
     assert capabilities.source == "stj_scon"
     assert capabilities.source_url == "https://processo.stj.jus.br/SCON/acordaos/"
-    assert capabilities.endpoints == ["GET /SCON/pesquisar.jsp"]
+    assert capabilities.endpoints == [
+        "GET /SCON/pesquisar.jsp",
+        "GET /SCON/SearchFiltroBRS",
+        "GET /SCON/jurisprudencia/pesquisaAjax.jsp",
+        "POST /SCON/ActionSelecionaDocumento",
+    ]
     assert capabilities.canonical_records == ["CanonicalDecision"]
     assert "stj_query_language" in capabilities.search_modes
     assert "document_url" in capabilities.extracted_fields

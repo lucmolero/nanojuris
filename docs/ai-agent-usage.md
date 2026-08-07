@@ -81,8 +81,8 @@ puladas ou falharam.
 ```
 
 ```text
-Consulte source_contracts para stj_scon e diga se a fonte esta pronta para
-pesquisa ampla.
+Consulte source_contracts para stf_juris e stj_scon e diga se as fontes estao
+prontas para pesquisa ampla.
 ```
 
 ```text
@@ -92,8 +92,9 @@ mais adequadas e traga os metadados principais.
 
 ```text
 Rode uma demo de juridimetria sobre IDPJ. Use search_unified com tjdf_juris,
-trf4_eproc_jurisprudencia, tjsp_cjsg e stj_scon, page_size 3. Liste fontes
-consultadas, puladas, com erro e os primeiros campos objetivos retornados.
+trf4_eproc_jurisprudencia, tjsp_cjsg, stf_juris e stj_scon, page_size 3. Liste
+fontes consultadas, puladas, com erro e os primeiros campos objetivos
+retornados.
 ```
 
 ## Como interpretar a busca unificada
@@ -121,6 +122,7 @@ Segundo a matriz atual de contratos, as fontes mais maduras para agentes sao:
 
 Fontes estrategicas, mas que exigem mais cuidado:
 
+- `stf_juris`;
 - `stj_scon`;
 - `tjsp_cjsg`.
 

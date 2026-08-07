@@ -70,6 +70,18 @@ SOURCE_OVERRIDES: dict[str, dict[str, Any]] = {
             "Adicionar matriz de campos por tribunal/origem quando houver variacao.",
         ],
     },
+    "stf_juris": {
+        "contract_level": 3,
+        "source_family": "api_json_jurisprudencia_superior",
+        "mcp_recommendation": ("Use quando a API responder JSON; reporte AWS WAF/SSL sem bypass."),
+        "jurimetry_fit": "alto para acordaos constitucionais quando o acesso estiver estavel.",
+        "risk_level": "alto",
+        "gaps": [
+            "Separar AWS WAF challenge, falha SSL local e ausencia de resultados.",
+            "Validar bases adicionais do frontend: decisoes, sumulas, informativos e noticias.",
+            "Promover inteiro teor do portal STF somente quando responder sem 403 em sessao limpa.",
+        ],
+    },
     "stj_scon": {
         "contract_level": 3,
         "source_family": "html_jurisprudencia_superior",

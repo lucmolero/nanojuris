@@ -13,6 +13,8 @@ class NanoJurisConfig:
     user_agent: str = "NanoJuris/0.1 (+https://github.com/lucmolero/nanojuris)"
     bnp_api_url: str = "https://pangeabnp.pdpj.jus.br/api/v1"
     comunica_pje_url: str = "https://comunicaapi.pje.jus.br"
+    stf_juris_url: str = "https://jurisprudencia.stf.jus.br"
+    stf_portal_url: str = "https://portal.stf.jus.br"
     stj_url: str = "https://processo.stj.jus.br"
     stj_scon_url: str = "https://scon.stj.jus.br"
     stm_jurisprudencia_url: str = "https://jurisprudencia.stm.jus.br"

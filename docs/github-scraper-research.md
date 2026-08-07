@@ -66,12 +66,13 @@ https://jurisprudencia.stf.jus.br/pages/search?base=acordaos&queryString=<termo>
 ```
 
 Probe com `requests` limpo encontrou falha local de certificado. Probe apenas de
-pesquisa, com verificacao SSL desativada, retornou HTTP `202` sem corpo. Isso
-indica que o site moderno provavelmente depende de frontend/API assincrona.
+pesquisa, com verificacao SSL desativada, retornou HTTP `202` sem corpo.
 
-Decisao: criar ficha futura `stf_juris`, mas ainda nao promover provider live.
-Antes, descobrir a API chamada pelo frontend em sessao limpa e validar sem
-captcha/login/token voluvel.
+Atualizacao: HAR posterior revelou a API JSON oficial do frontend em
+`POST /api/search/search`. A decisao atual e promover provider inicial
+`stf_juris` com parser por fixture e diagnostico explicito de WAF/SSL, sem
+prometer acesso live estavel nem inteiro teor enquanto o portal retornar 403 em
+sessao limpa.
 
 ### PJe consulta publica
 
@@ -131,7 +132,7 @@ real e sem captcha.
 | --- | --- | --- |
 | P0 implementado | `tjms_cjsg` | rota limpa validada e parser CJSG reutilizavel |
 | P1 | `esaj_cpopg` parametrizado | varios projetos confirmam padrao, mas cada tribunal precisa probe |
-| P1 | `stf_juris` ficha/API discovery | site moderno existe, mas `requests` ainda nao reproduz resultados |
+| P0 implementado | `stf_juris` | API JSON descoberta por HAR; provider funciona por fixture e reporta WAF/SSL |
 | P2 | `pje_public_query` diagnostico | muitos tribunais, mas captcha/login frequentes |
 | P2 | `tjce_esaj_cpopg` | seletores confirmados, precisa validacao limpa com caso publico |
 

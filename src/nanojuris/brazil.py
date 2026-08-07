@@ -101,6 +101,8 @@ _CORE_COURTS = [
         "national",
         official_url="https://portal.stf.jus.br/",
         source_system="portal_proprio",
+        provider_status="implemented",
+        providers=("stf_juris",),
     ),
     CourtInfo(
         "STJ",
@@ -109,6 +111,8 @@ _CORE_COURTS = [
         "national",
         official_url="https://www.stj.jus.br/sites/portalp/Inicio",
         source_system="portal_proprio",
+        provider_status="implemented",
+        providers=("stj_scon",),
     ),
     CourtInfo(
         "TST",

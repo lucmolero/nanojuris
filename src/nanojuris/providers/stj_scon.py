@@ -101,13 +101,22 @@ class StjSconProvider(JurisprudenceProvider):
                 AccessStatus.ACCESS_CONTROL_REQUIRED,
                 AccessStatus.SOURCE_UNAVAILABLE,
             ],
-            endpoints=["GET /SCON/pesquisar.jsp"],
+            endpoints=[
+                "GET /SCON/pesquisar.jsp",
+                "GET /SCON/SearchFiltroBRS",
+                "GET /SCON/jurisprudencia/pesquisaAjax.jsp",
+                "POST /SCON/ActionSelecionaDocumento",
+            ],
             supports_full_text=False,
             supports_catalog=False,
             supports_suggestions=False,
             supports_live_tests=True,
             limitations=[
                 "Busca principal mapeada por HAR publico como GET /SCON/pesquisar.jsp.",
+                (
+                    "HAR complementar observou SearchFiltroBRS, pesquisaAjax.jsp "
+                    "e ActionSelecionaDocumento."
+                ),
                 (
                     "Inteiro teor sera ampliado em etapa posterior quando "
                     "a URL publica responder sem controle de acesso."

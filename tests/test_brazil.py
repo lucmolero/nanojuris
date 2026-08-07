@@ -43,6 +43,8 @@ def test_list_courts_filters_by_branch_state_and_status():
         "TJSP",
     ]
     assert [court.code for court in implemented] == [
+        "STF",
+        "STJ",
         "STM",
         "TJAC",
         "TJAL",
@@ -55,11 +57,18 @@ def test_list_courts_filters_by_branch_state_and_status():
 
 
 def test_core_courts_include_official_urls_and_source_systems():
+    stf = get_court("STF")
     stj = get_court("STJ")
     cnj = get_court("CNJ")
 
+    assert stf.official_url == "https://portal.stf.jus.br/"
+    assert stf.source_system == "portal_proprio"
+    assert stf.provider_status == "implemented"
+    assert stf.providers == ("stf_juris",)
     assert stj.official_url == "https://www.stj.jus.br/sites/portalp/Inicio"
     assert stj.source_system == "portal_proprio"
+    assert stj.provider_status == "implemented"
+    assert stj.providers == ("stj_scon",)
     assert cnj.official_url == "https://www.cnj.jus.br/sistemas/datajud/"
     assert cnj.source_system == "datajud"
 

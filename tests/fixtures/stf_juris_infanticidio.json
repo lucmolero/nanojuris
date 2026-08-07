@@ -1,0 +1,79 @@
+{
+  "result": {
+    "took": 320,
+    "timed_out": false,
+    "hits": {
+      "total": {
+        "value": 3,
+        "relation": "eq"
+      },
+      "hits": [
+        {
+          "_id": "sjur561554",
+          "_score": 59.07817,
+          "_source": {
+            "base": "acordaos",
+            "id": "sjur561554",
+            "titulo": "ARE 1589201 AgR-segundo",
+            "processo_codigo_completo": "ARE 1589201 AgR-segundo",
+            "processo_numero": 1589201,
+            "processo_classe_processual_unificada_sigla": "ARE-AgR-segundo",
+            "processo_classe_processual_unificada_extenso": "SEGUNDO AG.REG. NO RECURSO EXTRAORDINARIO COM AGRAVO",
+            "relator_processo_nome": "FLAVIO DINO",
+            "ministro_facet": ["FLAVIO DINO"],
+            "orgao_julgador": "Primeira Turma",
+            "julgamento_data": "2026-04-29",
+            "publicacao_data": "2026-05-06",
+            "ementa_texto": "Ementa: Direito processual penal. Homicidio qualificado. Desclassificacao para infanticidio. Agravo nao provido.",
+            "acordao_ata": "A Turma, por unanimidade, conheceu do segundo agravo interno e negou-lhe provimento.",
+            "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=797183228",
+            "acompanhamento_processual_url": "https://portal.stf.jus.br/processos/listarProcessos.asp?numeroProcesso=1589201&classe=ARE",
+            "dje_url": "https://portal.stf.jus.br/servicos/dje/listarDiarioJustica.asp?tipoPesquisaDJ=AP&numero=1589201&classe=ARE",
+            "partes_lista_texto": "AGTE.(S): EXEMPLO SANITIZADO\nAGDO.(A/S): MINISTERIO PUBLICO",
+            "documental_publicacao_lista_texto": "PROCESSO ELETRONICO DJe PUBLIC 06-05-2026",
+            "documental_legislacao_citada_texto": ["CF-1988 ART-00093 INC-00009"],
+            "documental_indexacao_texto": "- VIDE EMENTA.",
+            "documental_observacao_texto": "Numero de paginas: 17.",
+            "documental_assunto_texto": "Direito processual penal",
+            "is_repercussao_geral": false,
+            "dg_atualizado_em": "2026-07-07T08:40:20.366994"
+          },
+          "highlight": {
+            "ementa_texto": [
+              "Desclassificacao para <em>infanticidio</em>. Agravo nao provido."
+            ]
+          }
+        },
+        {
+          "_id": "sjur500000",
+          "_score": 42.0,
+          "_source": {
+            "base": "acordaos",
+            "id": "sjur500000",
+            "titulo": "HC 123456",
+            "processo_codigo_completo": "HC 123456",
+            "processo_classe_processual_unificada_sigla": "HC",
+            "processo_classe_processual_unificada_extenso": "HABEAS CORPUS",
+            "relator_processo_nome": "MINISTRA EXEMPLO",
+            "orgao_julgador": "Segunda Turma",
+            "julgamento_data": "2025-05-01",
+            "publicacao_data": "2025-05-08",
+            "ementa_texto": "Habeas corpus. Direito penal. Exemplo sanitizado.",
+            "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=500000"
+          }
+        }
+      ]
+    },
+    "aggregations": {
+      "base": {
+        "buckets": [
+          {
+            "key": "acordaos",
+            "doc_count": 3
+          }
+        ]
+      }
+    }
+  },
+  "search_id": "sanitized-search-id"
+}

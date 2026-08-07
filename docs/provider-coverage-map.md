@@ -34,7 +34,7 @@ segredo de justica ou controles de acesso.
 | P0 | TCE-SP jurisprudencia estatica | ja implementado; sumulas e boletins publicos sem captcha | `CanonicalPrecedent` administrativo |
 | P0 | TRE-SP temas selecionados | ja implementado; curadoria tematica eleitoral publica | `CanonicalPrecedent` tematico |
 | P0 | STJ jurisprudencia/SCON | provider inicial `stj_scon` com parser offline; ficha em [stj-source-profile.md](stj-source-profile.md) | acordaos como `CanonicalDecision`; inteiro teor em fase futura |
-| P1 | STF jurisprudencia | repercussao geral, sumulas e acordaos constitucionais | precedentes e decisoes constitucionais |
+| P0 | STF jurisprudencia | provider inicial `stf_juris` via API JSON observada por HAR; WAF/SSL diagnosticados | acordaos como `CanonicalDecision`; inteiro teor como URL ate validar documento sem 403 |
 | P1 | TST jurisprudencia publica | SPA com backend identificado, mas payload exato ainda nao promovido | decisoes trabalhistas apos probe limpo |
 | P1 | TSE jurisprudencia publica | backend oficial identificado, mas retorno antirrobo observado | decisoes eleitorais somente se fluxo limpo existir |
 | P1 | DataJud/CNJ | cobertura nacional estruturada por processo e classe | metadados nacionais e ponte para jurimetria |
@@ -58,7 +58,7 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `eproc`: familia eproc, com pesquisa publica quando disponivel;
 - `pje`: familia PJe, normalmente com maior incidencia de controle de acesso;
 - `datajud`: API CNJ para dados estruturados nacionais;
-- `stj_scon`, `stf_jurisprudencia`, `tst_jurisprudencia`: providers por tribunal
+- `stj_scon`, `stf_juris`, `tst_jurisprudencia`: providers por tribunal
   superior quando o contrato for proprio.
 
 Esse desenho reduz duplicacao: quando dois tribunais compartilham a mesma
@@ -127,7 +127,7 @@ interromper com erro claro e `AccessStatus.ACCESS_CONTROL_REQUIRED`.
 ## Lacunas prioritarias
 
 1. Completar `official_url` e `source_system` no catalogo `CourtInfo`.
-2. Criar ficha tecnica publica para STF jurisprudencia.
+2. Aprofundar bases adicionais do `stf_juris`: decisoes, sumulas e informativos.
 3. Expandir `stj_scon` para inteiro teor publico quando a fonte responder sem
   controle de acesso.
 4. Separar provider por familia de sistema quando houver reaproveitamento real.

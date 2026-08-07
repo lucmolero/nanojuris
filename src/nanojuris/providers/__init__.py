@@ -3,6 +3,7 @@
 from nanojuris.providers.base import JurisprudenceProvider
 from nanojuris.providers.bnp_pangea import BnpPangeaProvider
 from nanojuris.providers.comunica_pje import ComunicaPjeProvider
+from nanojuris.providers.stf_juris import StfJurisProvider
 from nanojuris.providers.stj_scon import StjSconProvider
 from nanojuris.providers.stm_jurisprudencia import StmJurisprudenciaProvider
 from nanojuris.providers.tce_sp_jurisprudencia import TceSpJurisprudenciaProvider
@@ -23,6 +24,7 @@ __all__ = [
     "BnpPangeaProvider",
     "ComunicaPjeProvider",
     "JurisprudenceProvider",
+    "StfJurisProvider",
     "StjSconProvider",
     "StmJurisprudenciaProvider",
     "TceSpJurisprudenciaProvider",

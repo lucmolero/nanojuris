@@ -306,3 +306,20 @@ Cobertura objetiva inicial:
 
 Estado atual: implementacao inicial. A busca live deve ser tratada como opt-in e
 validada por fixture antes de expandir inteiro teor.
+
+### `stf_juris`
+
+Categoria: jurisprudencia de tribunal superior.
+
+Cobertura objetiva inicial:
+
+- acordaos publicos do STF via API JSON observada no frontend oficial;
+- titulo, numero processual, classe, relator, orgao julgador, datas, ementa,
+    partes, legislacao citada, URL do inteiro teor e URL de acompanhamento;
+- highlights retornados pela busca;
+- canonicalizacao para `CanonicalDecision`;
+- diagnostico separado para falha SSL local e desafio AWS WAF, sem bypass.
+
+Estado atual: provider implementado por contrato HAR/fixture. A busca live deve
+ser tratada como opt-in, porque a conexao limpa deste ambiente recebeu AWS WAF
+HTTP 202 e a URL de inteiro teor retornou HTTP 403.

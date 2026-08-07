@@ -17,6 +17,22 @@ cobre lista de resultados, parser por fixture HTML sanitizada e parser da
 estrutura real `.documento` observada no HAR. O inteiro teor ainda nao foi
 promovido como contrato estavel.
 
+Um HAR complementar recebido em 06/08/2026 confirmou que o frontend tambem usa
+rotas auxiliares para filtros, sugestoes e selecao de documento. Elas entram no
+dossie como contrato observado, mas nao sao promovidas automaticamente como API
+estavel ate serem reduzidas a fixtures e testes:
+
+```text
+GET  /SCON/SearchFiltroBRS
+GET  /SCON/jurisprudencia/pesquisaAjax.jsp
+POST /SCON/ActionSelecionaDocumento
+```
+
+O mesmo HAR carregou recursos de reCAPTCHA, Cloudflare Insights, Dynatrace,
+Google Analytics e scripts do portal. Esses recursos sao sinais de controle e
+telemetria do frontend; nao devem ser copiados para o provider nem usados para
+bypass.
+
 Parametros principais declarados pelo provider:
 
 ```text
@@ -57,6 +73,14 @@ Seletores principais observados no HTML real:
 | Pares campo/valor | `.paragrafoBRS` com `.docTitulo` e `.docTexto` |
 | Inteiro teor | `javascript:inteiro_teor('/SCON/GetInteiroTeorDoAcordao?...')` |
 | Processo relacionado | `javascript:processo('https://processo.stj.jus.br/processo/pesquisa/?num_registro=...')` |
+
+Rotas auxiliares observadas no HAR complementar:
+
+| Rota | Papel observado | Status no provider |
+| --- | --- | --- |
+| `/SCON/SearchFiltroBRS` | busca/filtro BRS com `livre`, `b`, `l`, `i`, `operador`, `ordenacao` | declarada em capabilities, ainda nao usada como rota primaria |
+| `/SCON/jurisprudencia/pesquisaAjax.jsp` | chamadas Ajax da tela de pesquisa por `livre`, `operador`, `pagina` e tipo | contrato observado, aguarda fixture especifica |
+| `/SCON/ActionSelecionaDocumento` | acao de selecao/abertura de documento | contrato observado, aguarda validacao de inteiro teor publico |
 
 ## Estados de resposta
 
@@ -125,5 +149,7 @@ Recomendacao: fonte estrategica, mas ainda inicial. O agente deve:
 - [x] Documentar parametros obrigatorios/opcionais em detalhe.
 - [x] Adicionar fixtures de acesso controlado e vazio.
 - [x] Reavaliar nivel de contrato para 3 quando o dossie HTTP estiver completo.
+- [x] Mapear HAR complementar com rotas `SearchFiltroBRS`, `pesquisaAjax.jsp` e
+  `ActionSelecionaDocumento`.
 - [ ] Criar teste live opt-in para registrar `AccessControlRequiredError` quando
   a origem exigir verificacao automatica.
