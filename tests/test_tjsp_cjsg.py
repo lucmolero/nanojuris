@@ -9,6 +9,7 @@ from nanojuris.errors import AccessControlRequiredError, ParserContractChangedEr
 from nanojuris.models import JurisprudenceQuery, SourceTrace
 from nanojuris.providers.tjsp_cjsg import (
     TjspCjsgProvider,
+    decode_cjsg_response_text,
     diagnose_cjsg_access,
     parse_cjsg_results,
 )
@@ -21,6 +22,16 @@ class FakeResponse:
         self.text = text
         self.status_code = status_code
         self.encoding = "utf-8"
+
+
+def test_decode_cjsg_response_uses_detected_encoding_without_charset():
+    response = requests.Response()
+    response.status_code = 200
+    response._content = "FEMINICÍDIO contra mulher GRÁVIDA".encode("windows-1252")
+    response.headers["Content-Type"] = "text/html"
+    response.encoding = None
+
+    assert decode_cjsg_response_text(response) == "FEMINICÍDIO contra mulher GRÁVIDA"
 
 
 class FakeSession:

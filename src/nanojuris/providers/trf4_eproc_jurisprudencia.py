@@ -230,8 +230,7 @@ class Trf4EprocJurisprudenciaProvider(JurisprudenceProvider):
             )
         if response.status_code >= 400:
             raise SourceUnavailableError(
-                "TRF4/eproc jurisprudence rejected request "
-                f"with HTTP {response.status_code}"
+                f"TRF4/eproc jurisprudence rejected request with HTTP {response.status_code}"
             )
         if _looks_like_access_control(text):
             raise AccessControlRequiredError(

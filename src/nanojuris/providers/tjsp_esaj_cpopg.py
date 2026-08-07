@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from nanojuris.config import NanoJurisConfig
 from nanojuris.errors import (
@@ -308,6 +308,9 @@ def parse_esaj_cpopg_document(
     process_number: str,
     trace: SourceTrace,
     source_url: str | None = None,
+    source: str = "tjsp_esaj_cpopg",
+    id_prefix: str = "tjsp-esaj-cpopg",
+    parser_name: str = "tjsp_esaj_cpopg.parse_esaj_cpopg_document",
 ) -> CanonicalDocument:
     """Parse a public e-SAJ CPOPg case page into a canonical document."""
 
@@ -327,8 +330,8 @@ def parse_esaj_cpopg_document(
     content_bytes = html.encode("utf-8")
 
     return CanonicalDocument(
-        id=f"tjsp-esaj-cpopg-{process_number}",
-        source="tjsp_esaj_cpopg",
+        id=f"{id_prefix}-{process_number}",
+        source=source,
         document_type="processo_1g",
         content_type="text/html",
         title=title,
@@ -340,7 +343,7 @@ def parse_esaj_cpopg_document(
         access_status=AccessStatus.PUBLIC,
         source_trace=trace,
         extraction_trace=ExtractionTrace(
-            parser="tjsp_esaj_cpopg.parse_esaj_cpopg_document",
+            parser=parser_name,
             parser_version="1",
             status=ExtractionStatus.COMPLETE,
             access_status=AccessStatus.PUBLIC,
@@ -494,7 +497,7 @@ def _normalize_process_number(value: str) -> str:
     return match.group(0)
 
 
-def _extract_case_metadata(soup: BeautifulSoup, text: str) -> dict[str, str]:
+def _extract_case_metadata(soup: BeautifulSoup, text: str) -> dict[str, Any]:
     labels = [
         "Classe",
         "Assunto",
@@ -695,7 +698,7 @@ def _find_process_number(text: str) -> str:
     return match.group(0) if match else ""
 
 
-def _dom_text(soup: BeautifulSoup, selector: str) -> str:
+def _dom_text(soup: BeautifulSoup | Tag, selector: str) -> str:
     element = soup.select_one(selector)
     if element is None:
         return ""
@@ -704,13 +707,12 @@ def _dom_text(soup: BeautifulSoup, selector: str) -> str:
 
 def _join_dom_text(soup: BeautifulSoup, selector: str) -> str:
     items = [
-        _normalize_spaces(element.get_text(" ", strip=True))
-        for element in soup.select(selector)
+        _normalize_spaces(element.get_text(" ", strip=True)) for element in soup.select(selector)
     ]
     return " ".join(item for item in items if item)
 
 
-def _build_title(metadata: dict[str, str]) -> str:
+def _build_title(metadata: dict[str, Any]) -> str:
     parts = [metadata.get("case_number", "")]
     if metadata.get("case_class"):
         parts.append(metadata["case_class"])

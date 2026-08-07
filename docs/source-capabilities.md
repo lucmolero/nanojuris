@@ -207,6 +207,76 @@ Estado atual: provider expandido para detalhe por numero CNJ e listas CPOPg.
 Smoke live reproduzido para `NMPARTE` com 4 resultados e `NUMOAB` com 2
 resultados durante a descoberta.
 
+### `tjac_esaj_cpopg`
+
+Categoria: consulta processual publica.
+
+Cobertura objetiva:
+
+- consulta de processo de primeiro grau por numero CNJ;
+- redirect oficial `search.do` para `show.do` quando a fonte encontra o caso;
+- classe, assunto, foro, vara, distribuicao, controle, area, partes e
+    movimentacoes em texto publico;
+- partes e movimentacoes estruturadas quando o HTML publico contem seletores
+    estaveis;
+- normalizacao para `CanonicalDocument` e resumo em `JurisprudenceResult`;
+- deteccao de captcha, login e controle de acesso sem bypass.
+
+Estado atual: provider implementado para detalhe por numero CNJ. Smoke limpo
+reproduzido para `0001970-91.2024.8.01.0001`, com redirect oficial para
+`show.do` e campos processuais publicos.
+
+### `tjsp_nugepnac`
+
+Categoria: precedentes qualificados de tribunal estadual.
+
+Cobertura objetiva:
+
+- catalogos oficiais TJSP/NugepNac de IRDR e IAC;
+- pagina de detalhe por `codigoNoticia`;
+- numero do tema, tipo, status, processo paradigma, assunto, orgao julgador,
+    relator, datas, questao submetida e tese firmada;
+- links relacionados preservados no `raw` para auditoria;
+- canonicalizacao para `CanonicalPrecedent`;
+- acesso limpo ao catalogo e detalhe; inteiro teor CJSG relacionado pode exigir
+    verificacao de acesso e nao e contornado.
+
+Estado atual: provider implementado com parser offline e fixture minima para
+lista/detalhe de IRDR.
+
+### `tce_sp_jurisprudencia`
+
+Categoria: jurisprudencia administrativa e contas publicas.
+
+Cobertura objetiva:
+
+- repertorio publico de sumulas do TCE-SP;
+- publicacoes do boletim de jurisprudencia;
+- numero da sumula, enunciado, historico/fundamento quando presente, edicao do
+    boletim e URL publica da publicacao;
+- canonicalizacao para `CanonicalPrecedent` por representar enunciados e
+    catalogos jurisprudenciais;
+- bloqueio explicito da busca dinamica com reCAPTCHA observada em
+    `/jurisprudencia/pesquisar`.
+
+Estado atual: provider implementado para catalogos estaticos publicos, com
+fixture offline para sumulas e boletins.
+
+### `tre_sp_temas`
+
+Categoria: jurisprudencia eleitoral tematica.
+
+Cobertura objetiva:
+
+- indice publico de temas selecionados do TRE-SP;
+- paginas tematicas por slug;
+- titulo do tema, resumo textual e links de decisoes/documentos selecionados;
+- canonicalizacao para `CanonicalPrecedent` como catalogo curado de temas;
+- fonte adequada para triagem tematica, nao para busca geral de acordaos.
+
+Estado atual: provider implementado com parser offline para indice e pagina de
+tema selecionado.
+
 ### `stj_scon`
 
 Categoria: jurisprudencia de tribunal superior.

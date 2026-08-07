@@ -58,17 +58,23 @@ NanoJuris e uma biblioteca Python open source para consulta, normalizacao e
 auditoria de jurisprudencia publica brasileira.
 
 O projeto nasce com os providers `bnp_pangea`, `comunica_pje`, `tjdf_juris`,
-`tjac_cjsg`, `tjal_cjsg`, `tjam_cjsg`, `tjms_cjsg`, `stm_jurisprudencia`, `tjsp_cjsg`, `tjsp_eproc_jurisprudencia`, `tjsp_esaj_cpopg`, `trf4_eproc_jurisprudencia` e
-`stj_scon`. `bnp_pangea` consulta a API publica usada pelo
+`tjac_cjsg`, `tjac_esaj_cpopg`, `tjal_cjsg`, `tjam_cjsg`, `tjms_cjsg`, `stm_jurisprudencia`,
+`tjsp_cjsg`, `tjsp_eproc_jurisprudencia`, `tjsp_esaj_cpopg`,
+`tjsp_nugepnac`, `tce_sp_jurisprudencia`, `tre_sp_temas`,
+`trf4_eproc_jurisprudencia` e `stj_scon`. `bnp_pangea` consulta a API publica usada pelo
 frontend do Banco Nacional de Precedentes/Pangea. `comunica_pje` consulta a API
 publica do Comunica PJe/DJEN para comunicacoes judiciais. `tjdf_juris` consulta
 a jurisprudencia publica do TJDFT/SISTJ. `tjac_cjsg`, `tjal_cjsg`, `tjam_cjsg` e
 `tjms_cjsg` consultam a jurisprudencia publica CJSG/e-SAJ de TJAC, TJAL, TJAM e TJMS. `tjsp_cjsg` consulta a
 pesquisa publica de jurisprudencia do TJSP/CJSG quando a fonte nao exige
 controle de acesso. `tjsp_eproc_jurisprudencia` consulta a jurisprudencia
-publica do eproc/TJSP. `trf4_eproc_jurisprudencia` consulta a jurisprudencia
+publica do eproc/TJSP. `tjsp_nugepnac` cobre IRDR/IAC oficiais do TJSP.
+`tce_sp_jurisprudencia` cobre sumulas e boletins publicos do TCE-SP.
+`tre_sp_temas` cobre temas selecionados publicos do TRE-SP.
+`trf4_eproc_jurisprudencia` consulta a jurisprudencia
 publica do eproc/TRF4 e suporta inteiro teor publico. `tjsp_esaj_cpopg` consulta processo publico de primeiro grau
-por numero CNJ, nome da parte e OAB no e-SAJ/TJSP. `stm_jurisprudencia` consulta
+por numero CNJ, nome da parte e OAB no e-SAJ/TJSP. `tjac_esaj_cpopg` consulta
+processo publico de primeiro grau por numero CNJ no e-SAJ/TJAC. `stm_jurisprudencia` consulta
 a jurisprudencia publica do STM/JMU e preserva a URL publica de inteiro teor. `stj_scon` inicia a cobertura STJ/SCON por acordaos
 com parser offline, capabilities declaradas e ficha publica em
 [docs/stj-source-profile.md](docs/stj-source-profile.md).
@@ -91,6 +97,10 @@ NanoJuris entrega:
 - provider TJSP/eproc para jurisprudencia publica;
 - provider TJSP/e-SAJ CPOPg para consulta processual publica por numero CNJ,
   nome da parte e OAB;
+- provider TJAC/e-SAJ CPOPg para consulta processual publica por numero CNJ;
+- provider TJSP/NugepNac para IRDR/IAC oficiais;
+- provider TCE-SP para sumulas e boletins de jurisprudencia;
+- provider TRE-SP para temas selecionados de jurisprudencia eleitoral;
 - provider TRF4/eproc para jurisprudencia publica e inteiro teor;
 - provider STJ/SCON inicial com parser offline de acordaos;
 - cliente Python simples;
@@ -190,11 +200,15 @@ nanojuris buscar "infanticidio" --fonte comunica_pje --orgaos TJSP --limite 5
 nanojuris buscar "infanticidio" --fonte comunica_pje --publicacao-de 2026-07-31 --publicacao-ate 2026-07-31
 nanojuris buscar "infanticidio" --fonte tjdf_juris --limite 5
 nanojuris buscar "infanticidio" --fonte tjac_cjsg --limite 5
+nanojuris buscar "" --fonte tjac_esaj_cpopg --numero "0001970-91.2024.8.01.0001"
 nanojuris buscar "infanticidio" --fonte tjal_cjsg --limite 5
 nanojuris buscar "infanticidio" --fonte tjam_cjsg --limite 5
 nanojuris buscar "infanticidio" --fonte tjms_cjsg --limite 5
 nanojuris buscar "deserção" --fonte stm_jurisprudencia --limite 5
 nanojuris buscar "infanticidio" --fonte tjsp_eproc_jurisprudencia --limite 5
+nanojuris buscar "garantia" --fonte tjsp_nugepnac --tipos irdr --limite 5
+nanojuris buscar "subvenção" --fonte tce_sp_jurisprudencia --tipos sumula --limite 5
+nanojuris buscar "abuso de poder" --fonte tre_sp_temas --limite 5
 nanojuris buscar "deserção" --fonte trf4_eproc_jurisprudencia --limite 5
 nanojuris buscar "" --fonte tjsp_esaj_cpopg --parte "ANDERSON DE AZEVEDO GONCALVES" --limite 4
 nanojuris buscar "" --fonte tjsp_esaj_cpopg --oab "123456" --limite 2

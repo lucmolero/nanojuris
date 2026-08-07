@@ -22,6 +22,19 @@ Prioridade imediata:
 6. Familia e-SAJ CPOPg: extrair base parametrizada depois de validar tribunais
    adicionais com numeros publicos reais.
 
+Atualizacao de qualidade em 2026-08-03:
+
+1. Promovidos e implementados: `tjsp_nugepnac`, `tce_sp_jurisprudencia` e
+  `tre_sp_temas`, todos com HTML oficial publico e sem captcha/login no fluxo
+  estatico validado.
+2. Candidatos P1 para nova descoberta: TSE pagina institucional
+  `jurisprudencia-por-assunto` como catalogo documental/tematico, e TCU pesquisa
+  textual porque o bundle publico expõe `/api/publico/entidades/busca` com
+  `Allow: POST,OPTIONS`.
+3. Ainda nao promover: busca geral TSE/SJUR com retorno antirrobo, TST backend
+  sem payload reproduzido, CJF/TNU instavel e STF com falha local de certificado
+  no probe limpo.
+
 ## Evidencia live desta verificacao
 
 ### Comunica PJe/DJEN
@@ -147,6 +160,47 @@ Conclusao: manter ficha tecnica e parser offline; live depende de API publica ou
 contrato institucional. `get_decisions()` pode ser preparado com fixture, mas nao
 deve assumir acesso limpo.
 
+### SP oficial - NugepNac, TCE-SP e TRE-SP
+
+Fontes promovidas em 2026-08-03:
+
+```text
+TJSP/NugepNac: GET /NugepNac/Irdr, /NugepNac/Iac e DetalheTema
+TCE-SP: GET /boletim-de-jurisprudencia/sumulas e /publicacoes
+TRE-SP: GET /jurisprudencia/temas-selecionados-1 e paginas por slug
+```
+
+Conclusao: as tres fontes foram implementadas como providers de catalogo
+publico, com fixtures offline, capabilities declaradas e documentacao. Elas
+elevam a cobertura paulista sem depender de eproc ou CJSG sujeito a controle de
+acesso.
+
+### Rodada curta de descoberta nacional - 2026-08-03
+
+Probes limpos adicionais:
+
+```text
+GET https://jurisprudencia.tst.jus.br/config.json
+  -> HTTP 200, JSON, base_url=https://jurisprudencia-backend2.tst.jus.br
+
+GET https://www.tse.jus.br/jurisprudencia/jurisprudencia-por-assunto
+  -> HTTP 200, HTML publico, titulo "Jurisprudência por assunto"
+
+GET https://pesquisa.apps.tcu.gov.br/#/pesquisa/jurisprudencia-selecionada
+  -> HTTP 200, SPA publica; bundle contem /api/publico/entidades/busca
+
+GET https://pesquisa.apps.tcu.gov.br/api/publico/entidades/busca
+  -> HTTP 405, Allow: POST,OPTIONS
+
+GET https://www.cjf.jus.br/jurisprudencia/tnu/
+  -> conexao fechada sem resposta
+```
+
+Conclusao: TSE pagina estatica e TCU API candidata merecem a proxima rodada de
+descoberta. Nenhum dos dois deve ser promovido sem fixture e payload limpo:
+TSE como catalogo documental exige parser de pagina institucional; TCU exige
+descobrir o corpo POST real sem token privado ou estado de navegador.
+
 ## Matriz por provider
 
 | Provider | Estado atual | Melhor expansao | Evidencia | Risco |
@@ -155,6 +209,11 @@ deve assumir acesso limpo.
 | `bnp_pangea` | API publica viva para termos comuns | Diagnostico HTTP 400 criminal; contrato atual do frontend | `ICMS` OK, criminais HTTP 400 | Medio |
 | `tjms_cjsg` | CJSG live limpo | Paginacao, filtros de relator/comarca/classe/assunto/publicacao | POST limpo com acordaos | Medio |
 | `tjdf_juris` | SISTJ live limpo | Paginacao completa e variantes de documento/base | Search/detalhe HTTP 200 | Medio |
+| `tjsp_nugepnac` | Catalogo oficial limpo | Refinar campos, live opt-in e cobertura IAC real | IRDR/IAC detalhe HTTP 200 | Baixo |
+| `tce_sp_jurisprudencia` | Catalogo estatico limpo | Melhorar parser de historico/fundamento e boletins | Sumulas/publicacoes HTTP 200 | Baixo |
+| `tre_sp_temas` | Catalogo tematico limpo | Ampliar fixtures por tema e normalizar links de decisoes | Temas selecionados HTTP 200 | Baixo |
+| `tcu_pesquisa_textual` | Candidato tecnico | Descobrir payload POST publico de `/api/publico/entidades/busca` | GET 405, Allow POST | Medio |
+| `tse_jurisprudencia_assunto` | Candidato documental | Parser de pagina estatica/links oficiais | HTML institucional HTTP 200 | Baixo/Medio |
 | `tjsp_esaj_cpopg` | CPOPg expandido | Classe base e-SAJ parametrizada; mais modos por probe real | NUMPROC/NMPARTE/NUMOAB validados | Medio |
 | `tjsp_cjsg` | Parser e diagnostico | Offline + diagnostics; filtros so se rota limpa voltar | Captcha/recaptcha/uuidCaptcha | Alto |
 | `stj_scon` | Parser offline/ficha | Contato/API publica; get_document com fixture | Controle/Cloudflare/recaptcha | Alto |
@@ -170,6 +229,15 @@ deve assumir acesso limpo.
 
 ### P1 - Proxima rodada curta
 
+- `tse_jurisprudencia_assunto`: criar ficha tecnica e fixture da pagina publica
+  `jurisprudencia-por-assunto`; promover apenas se houver conteudo tematico
+  juridico objetivo alem de navegacao institucional.
+- `tcu_pesquisa_textual`: extrair do bundle publico o contrato POST de
+  `/api/publico/entidades/busca`; promover somente com payload limpo e JSON
+  juridico objetivo.
+- `esaj_cposg`: continuar descoberta de 2o grau e-SAJ. TJAL/TJAC `cposg5` ainda
+  retornaram formulario com erro de preenchimento, e TJAM CPOSg retornou 503 ou
+  portal; nao promover ate obter detalhe publico real.
 - `bnp_pangea`: continuar a descoberta do contrato que rejeita termos criminais;
   o diagnostico especifico de HTTP 400 com corpo e payload ja foi implementado.
 - `tjms_cjsg`: implementar paginacao por `trocaDePagina.do` se o

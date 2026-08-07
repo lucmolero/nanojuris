@@ -118,6 +118,7 @@ class TjspEprocJurisprudenciaProvider(JurisprudenceProvider):
                 "document_url",
                 "full_text_url",
                 "id_jurisprudencia",
+                "source_origin",
             ],
             access_statuses=[
                 AccessStatus.PUBLIC,
@@ -142,6 +143,7 @@ class TjspEprocJurisprudenciaProvider(JurisprudenceProvider):
             supports_live_tests=True,
             limitations=[
                 "Rota publica descoberta e validada por requests limpo em 2026-08-02.",
+                "O filtro source_origin aceita colegio_recursal, primeiro_grau e segundo_grau.",
                 "Cards de resultado trazem texto de decisao; inteiro teor separado pode "
                 "redirecionar para controle de acesso.",
                 "A fonte pode alterar hashes, layouts e listas de filtros sem aviso.",
@@ -185,8 +187,7 @@ class TjspEprocJurisprudenciaProvider(JurisprudenceProvider):
             )
         if response.status_code >= 400:
             raise SourceUnavailableError(
-                "TJSP/eproc jurisprudence rejected request "
-                f"with HTTP {response.status_code}"
+                f"TJSP/eproc jurisprudence rejected request with HTTP {response.status_code}"
             )
         if _looks_like_access_control(text):
             raise AccessControlRequiredError(
@@ -289,9 +290,9 @@ def _parse_result_item(
     )
 
 
-def _build_payload(query: JurisprudenceQuery) -> dict[str, str]:
+def _build_payload(query: JurisprudenceQuery) -> dict[str, str | list[str]]:
     search_text = query.text or query.exact_phrase
-    return {
+    payload: dict[str, str | list[str]] = {
         "txtPesquisa": search_text,
         "rdoCampo": "E" if query.exact_phrase else "I",
         "hdnExibirPesquisaAvancada": "",
@@ -306,6 +307,50 @@ def _build_payload(query: JurisprudenceQuery) -> dict[str, str]:
         "hdnPublicacaoFim": query.published_to,
         "chkAgruparResultados": "on",
     }
+    document_types = _map_document_types(query.types)
+    if document_types:
+        payload["selTipoDocumento[]"] = document_types
+    source_origins = _map_source_origins(query.source_origins or [query.source_origin])
+    if source_origins:
+        payload["selOrigem[]"] = source_origins
+    return payload
+
+
+def _map_document_types(values: list[str]) -> list[str]:
+    mapping = {
+        "1": "1",
+        "acordao": "1",
+        "2": "2",
+        "monocratica": "2",
+        "decisao_monocratica": "2",
+        "3": "3",
+        "sumula": "3",
+        "4": "4",
+        "despacho": "4",
+        "despacho_decisao_vice_presidencia": "4",
+        "5": "5",
+        "sentenca": "5",
+    }
+    return [mapped for value in values if (mapped := mapping.get(_normalize_label(value)))]
+
+
+def _map_source_origins(values: list[str]) -> list[str]:
+    mapping = {
+        "3": "3",
+        "colegio_recursal": "3",
+        "colegio recursal": "3",
+        "4": "4",
+        "primeiro_grau": "4",
+        "primeiro grau": "4",
+        "1g": "4",
+        "5": "5",
+        "segundo_grau": "5",
+        "segundo grau": "5",
+        "2g": "5",
+    }
+    return [
+        mapped for value in values if value and (mapped := mapping.get(_normalize_label(value)))
+    ]
 
 
 def _extract_label_values(item: Tag) -> dict[str, str]:
@@ -380,17 +425,20 @@ def _looks_like_search_page(soup: BeautifulSoup) -> bool:
 
 def _looks_like_access_control(html: str) -> bool:
     lowered = html.lower()
-    return any(
-        signal in lowered
-        for signal in [
-            "g-recaptcha",
-            "cf-turnstile",
-            "cloudflare",
-            "captcha",
-            "login e senha",
-            "entrar no sistema",
-        ]
-    ) and "resultadoitem" not in lowered
+    return (
+        any(
+            signal in lowered
+            for signal in [
+                "g-recaptcha",
+                "cf-turnstile",
+                "cloudflare",
+                "captcha",
+                "login e senha",
+                "entrar no sistema",
+            ]
+        )
+        and "resultadoitem" not in lowered
+    )
 
 
 def _digits(value: object) -> str:

@@ -103,6 +103,24 @@ class FakeProvider:
         return [text, f"{text} sugestao"]
 
 
+class FailingProvider:
+    name = "failing"
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        raise RuntimeError("fonte indisponivel")
+
+    def get_capabilities(self):
+        return ProviderCapabilities(
+            source="failing",
+            display_name="Fonte Falha",
+            source_url="https://example.test/failing",
+            category="court_jurisprudence",
+            search_modes=["text"],
+            canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
+        )
+
+
 def test_client_builds_query_for_provider():
     provider = FakeProvider()
     client = NanoJurisClient(providers=[provider])
@@ -130,6 +148,23 @@ def test_client_search_canonical_and_store_workflow():
     assert stored_records[0].id == "fake-1"
     assert store.count(kind="precedent") == 1
     assert store.get("precedent", "fake-1")["court"] == "STF"
+
+
+def test_client_search_many_unifies_results_and_keeps_source_errors():
+    client = NanoJurisClient(providers=[FakeProvider(), FailingProvider()])
+
+    payload = client.search_many("ICMS", sources=["fake", "failing"])
+
+    assert payload["sources"] == ["fake", "failing"]
+    assert payload["total_returned"] == 1
+    assert isinstance(payload["results"][0], CanonicalPrecedent)
+    assert payload["errors"] == [
+        {
+            "source": "failing",
+            "error_type": "RuntimeError",
+            "message": "fonte indisponivel",
+        }
+    ]
 
 
 def test_client_search_and_store_run_returns_saved_run():

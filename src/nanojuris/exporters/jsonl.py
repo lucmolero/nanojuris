@@ -40,13 +40,12 @@ def to_canonical_jsonl(
         else page_or_records
     )
     return "\n".join(
-        json.dumps(_to_jsonable(record), ensure_ascii=False, sort_keys=True)
-        for record in records
+        json.dumps(_to_jsonable(record), ensure_ascii=False, sort_keys=True) for record in records
     )
 
 
 def _to_jsonable(value: object) -> Any:
-    if is_dataclass(value):
+    if is_dataclass(value) and not isinstance(value, type):
         return _to_jsonable(asdict(value))
     if isinstance(value, dict):
         return {str(key): _to_jsonable(item) for key, item in value.items()}

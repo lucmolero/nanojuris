@@ -124,6 +124,27 @@ def test_provider_search_uses_exact_phrase_as_summary_query_text():
     assert payload["rdoCampo"] == "E"
 
 
+def test_provider_search_maps_source_origin_and_document_types_to_official_filters():
+    session = FakeSession([FakeResponse(_fixture_html())])
+    provider = TjspEprocJurisprudenciaProvider(
+        NanoJurisConfig(rate_limit_interval=0),
+        session=session,
+    )
+
+    provider.search(
+        JurisprudenceQuery(
+            text="desconsideracao",
+            types=["acordao"],
+            source_origin="segundo_grau",
+            page_size=1,
+        )
+    )
+
+    payload = session.calls[0]["kwargs"]["data"]
+    assert payload["selTipoDocumento[]"] == ["1"]
+    assert payload["selOrigem[]"] == ["5"]
+
+
 def test_eproc_jurisprudencia_canonicalizes_as_decision():
     provider = TjspEprocJurisprudenciaProvider(
         NanoJurisConfig(rate_limit_interval=0),

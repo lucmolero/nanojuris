@@ -206,6 +206,8 @@ class JurisprudenceQuery:
     precatory_number: str = ""
     police_document: str = ""
     cda: str = ""
+    source_origin: str = ""
+    source_origins: list[str] = field(default_factory=list)
     fetch_details: bool = False
     courts: list[str] = field(default_factory=list)
     types: list[str] = field(default_factory=list)

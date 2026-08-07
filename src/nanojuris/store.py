@@ -594,7 +594,7 @@ def _run_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def _to_jsonable(value: object) -> Any:
-    if is_dataclass(value):
+    if is_dataclass(value) and not isinstance(value, type):
         return _to_jsonable(asdict(value))
     if isinstance(value, dict):
         return {str(key): _to_jsonable(item) for key, item in value.items()}

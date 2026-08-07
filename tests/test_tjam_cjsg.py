@@ -56,9 +56,7 @@ def test_parse_cjsg_results_can_stamp_tjam_source_and_court():
     assert page.results[0].id == "tjam-cjsg-20787558-0"
     assert page.results[0].source == "tjam_cjsg"
     assert page.results[0].court == "TJAM"
-    assert page.results[0].raw["full_text_url"].startswith(
-        "https://consultasaj.tjam.jus.br/cjsg"
-    )
+    assert page.results[0].raw["full_text_url"].startswith("https://consultasaj.tjam.jus.br/cjsg")
 
 
 def test_provider_search_posts_tjam_cjsg_payload_and_parses_results():

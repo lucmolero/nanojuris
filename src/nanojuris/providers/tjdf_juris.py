@@ -383,8 +383,7 @@ def _extract_labeled_fields(html: str) -> dict[str, str]:
 def _extract_detail_fields_or_raise(html: str, document_id: str) -> dict[str, str]:
     fields = _extract_labeled_fields(html)
     if not any(
-        fields.get(key)
-        for key in ("ementa", "classe_do_processo", "registro_do_acordao_numero")
+        fields.get(key) for key in ("ementa", "classe_do_processo", "registro_do_acordao_numero")
     ):
         raise ParserContractChangedError(
             f"TJDFT/SISTJ detail for document {document_id!r} returned no acórdão fields"

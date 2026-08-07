@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any
+from typing import Any, cast
 
 from nanojuris import __version__
 from nanojuris.brazil import list_courts
@@ -261,10 +261,10 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "documento":
             document = client.get_document(args.id, source=args.fonte)
-            payload = document.to_dict()
+            document_payload = document.to_dict()
             if args.compacto:
-                payload = _compact_record(payload)
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
+                document_payload = _compact_record(document_payload)
+            print(json.dumps(document_payload, ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "parametros":
@@ -282,12 +282,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "fontes":
-            payload = (
+            sources_payload: Any = (
                 client.get_capabilities(source=args.fonte).to_dict()
                 if args.fonte
                 else [capability.to_dict() for capability in client.list_sources()]
             )
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(json.dumps(sources_payload, ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "diagnostico":
@@ -296,13 +296,15 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "tribunais":
-            courts = list_courts(
-                branch=args.ramo or None,
+            court_rows = list_courts(
+                branch=cast(Any, args.ramo or None),
                 state=args.uf or None,
-                source_system=args.sistema or None,
+                source_system=cast(Any, args.sistema or None),
                 implemented=True if args.implementados else None,
             )
-            print(json.dumps([court.to_dict() for court in courts], ensure_ascii=False, indent=2))
+            print(
+                json.dumps([court.to_dict() for court in court_rows], ensure_ascii=False, indent=2)
+            )
             return 0
 
         if args.command == "store":
@@ -330,22 +332,22 @@ def main(argv: list[str] | None = None) -> int:
                     print(json.dumps(records, ensure_ascii=False, indent=2))
                     return 0
                 if args.store_command == "get":
-                    record = store.get(args.kind, args.id)
-                    if record is None:
+                    stored_record = store.get(cast(Any, args.kind), args.id)
+                    if stored_record is None:
                         raise ValueError("Registro nao encontrado")
                     if args.compacto:
-                        record = _compact_record(record)
-                    print(json.dumps(record, ensure_ascii=False, indent=2))
+                        stored_record = _compact_record(stored_record)
+                    print(json.dumps(stored_record, ensure_ascii=False, indent=2))
                     return 0
                 if args.store_command == "runs":
                     runs = store.list_research_runs(limit=args.limite)
                     print(json.dumps(runs, ensure_ascii=False, indent=2))
                     return 0
                 if args.store_command == "run":
-                    run = store.get_research_run(args.id)
-                    if run is None:
+                    saved_run = store.get_research_run(args.id)
+                    if saved_run is None:
                         raise ValueError("Busca salva nao encontrada")
-                    print(json.dumps(run, ensure_ascii=False, indent=2))
+                    print(json.dumps(saved_run, ensure_ascii=False, indent=2))
                     return 0
                 if args.store_command == "records":
                     records = store.get_research_run_records(
@@ -358,15 +360,15 @@ def main(argv: list[str] | None = None) -> int:
                     print(json.dumps(records, ensure_ascii=False, indent=2))
                     return 0
                 if args.store_command == "export":
-                    run = store.get_research_run(args.id)
-                    if run is None:
+                    export_run = store.get_research_run(args.id)
+                    if export_run is None:
                         raise ValueError("Busca salva nao encontrada")
                     records = store.get_research_run_records(
                         args.id,
                         limit=args.limite,
                         offset=args.offset,
                     )
-                    print(research_run_to_export(run, records, args.formato))
+                    print(research_run_to_export(export_run, records, args.formato))
                     return 0
     except Exception as exc:  # noqa: BLE001 - CLI boundary
         print(f"erro: {exc}", file=sys.stderr)

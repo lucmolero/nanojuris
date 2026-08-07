@@ -27,10 +27,16 @@ segredo de justica ou controles de acesso.
 | P0 | BNP/Pangea | ja implementado; precedentes qualificados nacionais | `CanonicalPrecedent`, decisoes vinculadas quando disponiveis |
 | P0 | Comunica PJe/DJEN | ja implementado; API publica nacional para comunicacoes judiciais | comunicacoes como `CanonicalDecision` com `type="comunicacao"` |
 | P0 | TJDFT/SISTJ | ja implementado; rota limpa validada a partir de inteligencia CourtsBR | acordaos como `CanonicalDecision` e detalhe HTML publico |
+| P0 | TJAC/e-SAJ CPOPg | ja implementado; processo publico 1G validado por redirect oficial | `CanonicalDocument` de autos/processo publico |
 | P0 | TJMS/CJSG | ja implementado; rota limpa validada a partir de projeto aberto TJMS/e-SAJ | acordaos como `CanonicalDecision` e inteiro teor quando publico |
 | P0 | TJSP/CJSG | ja implementado parcialmente; maior tribunal estadual; HTML real validado | `CanonicalDecision`, `CanonicalDocument` quando publico |
+| P0 | TJSP/NugepNac | ja implementado; catalogo oficial limpo de IRDR/IAC | `CanonicalPrecedent` com tema, questao e tese |
+| P0 | TCE-SP jurisprudencia estatica | ja implementado; sumulas e boletins publicos sem captcha | `CanonicalPrecedent` administrativo |
+| P0 | TRE-SP temas selecionados | ja implementado; curadoria tematica eleitoral publica | `CanonicalPrecedent` tematico |
 | P0 | STJ jurisprudencia/SCON | provider inicial `stj_scon` com parser offline; ficha em [stj-source-profile.md](stj-source-profile.md) | acordaos como `CanonicalDecision`; inteiro teor em fase futura |
 | P1 | STF jurisprudencia | repercussao geral, sumulas e acordaos constitucionais | precedentes e decisoes constitucionais |
+| P1 | TST jurisprudencia publica | SPA com backend identificado, mas payload exato ainda nao promovido | decisoes trabalhistas apos probe limpo |
+| P1 | TSE jurisprudencia publica | backend oficial identificado, mas retorno antirrobo observado | decisoes eleitorais somente se fluxo limpo existir |
 | P1 | DataJud/CNJ | cobertura nacional estruturada por processo e classe | metadados nacionais e ponte para jurimetria |
 | P2 | TST/TSE/STM | ramos especializados com alta demanda de pesquisa | decisoes e precedentes por ramo |
 | P2 | TRFs e TJs via familia de sistema | ampliar cobertura regional com reuso de parsers | providers por sistema antes de providers por tribunal |
@@ -42,8 +48,12 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `bnp_pangea`: API JSON de precedentes;
 - `comunica_pje`: API JSON de comunicacoes judiciais/DJEN;
 - `tjdf_juris`: HTML SISTJ/TJDFT para acordaos e bases indexadas;
+- `tjac_esaj_cpopg`: e-SAJ CPOPg/TJAC para consulta processual publica;
 - `tjms_cjsg`: HTML e-SAJ/CJSG do TJMS;
 - `tjsp_cjsg`: HTML ESAJ/CJSG de jurisprudencia;
+- `tjsp_nugepnac`: catalogos oficiais TJSP/NugepNac de precedentes;
+- `tce_sp_jurisprudencia`: catalogos estaticos TCE-SP de sumulas e boletins;
+- `tre_sp_temas`: curadoria tematica publica do TRE-SP;
 - `esaj`: familia Softplan/e-SAJ para tribunais que compartilham padroes;
 - `eproc`: familia eproc, com pesquisa publica quando disponivel;
 - `pje`: familia PJe, normalmente com maior incidencia de controle de acesso;

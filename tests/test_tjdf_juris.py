@@ -118,6 +118,7 @@ def test_search_sends_tjdf_summary_filter():
     assert results_params["ementa"] == "infanticidio"
     assert results_params["numero"] == ""
 
+
 def test_search_page_maps_to_canonical_decision():
     session = FakeSession(
         [

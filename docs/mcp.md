@@ -84,11 +84,38 @@ Parametros minimos:
 - `courts`
 - `types`
 - `number`
+- `source_origin`: filtro especifico de fontes que expoem origem/base; no
+  TJSP/eproc aceita `colegio_recursal`, `primeiro_grau` e `segundo_grau`;
 - `page`
 - `page_size`
 - `canonical`
 
 O tamanho de pagina e limitado de forma conservadora para uso por agentes.
+Use `source="all"`, `source="*"` ou `source="unified"` para agregar as fontes
+de jurisprudencia implementadas em uma unica resposta, preservando erros por
+fonte no campo `errors`.
+
+### `search_unified`
+
+Executa busca paginada em multiplas fontes de jurisprudencia e retorna uma lista
+unificada de resultados.
+
+Parametros principais:
+
+- `text`
+- `sources`: opcional; quando vazio, usa fontes de `court_jurisprudence`
+  implementadas no core;
+- `courts`
+- `types`
+- `number`
+- `source_origin`
+- `page`
+- `page_size`
+- `canonical`
+
+A resposta inclui `sources`, `total_returned`, `results` e `errors`. Isso permite
+que agentes consultem varias fontes em uma chamada sem perder diagnosticos de
+captcha, indisponibilidade ou mudanca de contrato de parser em uma fonte isolada.
 
 ### `export_results`
 

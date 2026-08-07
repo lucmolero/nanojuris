@@ -105,6 +105,27 @@ normalizou 2 itens da primeira pagina de 5 resultados, incluindo
 Decisao: promover como provider `tjac_cjsg`, categoria
 `court_jurisprudence`, reaproveitando o parser CJSG comum.
 
+### Promovido: TJAC/e-SAJ CPOPg
+
+Probe limpo em 2026-08-03:
+
+```text
+GET https://esaj.tjac.jus.br/cpopg/search.do
+cbPesquisa=NUMPROC
+dadosConsulta.valorConsultaNuUnificado=0001970-91.2024.8.01.0001
+```
+
+Resultado observado: HTTP 200 com redirect oficial para
+`/cpopg/show.do?processo.codigo=01000F4XS0000&processo.foro=1&processo.numero=0001970-91.2024.8.01.0001`.
+O HTML contem numero CNJ, classe `Recurso em Sentido Estrito`, status
+`Arquivado`, assunto `Homicídio Simples`, foro Rio Branco, vara, partes e
+movimentacoes. A pagina inclui scripts de login/captcha do e-SAJ, mas o conteudo
+processual publico apareceu no corpo sem exigir resolucao de captcha.
+
+Decisao: promover como provider `tjac_esaj_cpopg`, categoria `case_lookup`,
+limitado inicialmente a busca por numero CNJ. Nome/OAB e outros modos ficam
+pendentes de probe limpo proprio.
+
 ### Promovido: TJAL/CJSG
 
 Probe limpo em 2026-08-03:
@@ -229,6 +250,61 @@ Classificacao: provider `tjsp_esaj_cpopg`, categoria `case_lookup`. Os demais
 modos expostos pelo formulario foram mapeados, mas devem continuar sujeitos a
 smoke limpo antes de qualquer promessa de estabilidade.
 
+### Promovido: TJSP/NugepNac IRDR/IAC
+
+Rotas publicas oficiais:
+
+```text
+GET https://www.tjsp.jus.br/NugepNac/Irdr
+GET https://www.tjsp.jus.br/NugepNac/Iac
+GET https://www.tjsp.jus.br/NugepNac/(Irdr|Iac)/DetalheTema?codigoNoticia=<id>&pagina=1
+```
+
+Resultado observado: paginas HTML institucionais publicas, sem captcha/login no
+catalogo e no detalhe do tema. O detalhe contem campos juridicos objetivos como
+processo paradigma, assunto, orgao julgador, relator, datas, suspensao, questao
+submetida e tese firmada.
+
+Decisao: promover como provider `tjsp_nugepnac`, categoria `court_precedents`,
+canonicalizado como `CanonicalPrecedent`. Links de acordaos CJSG relacionados
+continuam classificados como parciais quando redirecionam para verificacao de
+acesso.
+
+### Promovido: TCE-SP Jurisprudencia Estatica
+
+Rotas publicas oficiais:
+
+```text
+GET https://www.tce.sp.gov.br/boletim-de-jurisprudencia/sumulas
+GET https://www.tce.sp.gov.br/boletim-de-jurisprudencia/publicacoes
+GET https://www.tce.sp.gov.br/boletim-de-jurisprudencia/indice-alfabetico-remissivo
+```
+
+Resultado observado: paginas HTML publicas com repertorio de sumulas e lista de
+boletins de jurisprudencia. A busca dinamica `/jurisprudencia/pesquisar` contem
+reCAPTCHA no fluxo observado e nao foi promovida.
+
+Decisao: promover como provider `tce_sp_jurisprudencia`, categoria
+`administrative_jurisprudence`, cobrindo catalogos estaticos publicos de sumulas
+e boletins.
+
+### Promovido: TRE-SP Temas Selecionados
+
+Rotas publicas oficiais:
+
+```text
+GET https://www.tre-sp.jus.br/jurisprudencia/temas-selecionados-1
+GET https://www.tre-sp.jus.br/jurisprudencia/arquivos-da-secao-de-jurisprudencia-sp/temas-selecionados/<slug>
+```
+
+Resultado observado: indice e paginas tematicas publicas, sem captcha/login no
+fluxo estatico. As paginas contem tema, resumo textual e links de decisoes ou
+documentos selecionados.
+
+Decisao: promover como provider `tre_sp_temas`, categoria
+`electoral_jurisprudence`, para curadoria tematica eleitoral paulista. Nao e
+busca geral de acordaos.
+
 ### Bloqueado ou pendente
 
 | Fonte | Resultado do probe limpo | Classificacao |
@@ -240,7 +316,13 @@ smoke limpo antes de qualquer promessa de estabilidade.
 | BNP/Pangea termos criminais | HTTP 400 para `infanticidio`/`homicidio`, embora outros termos funcionem | aprofundar validacao de payload/diagnostico |
 | TJMS/CJSG data de publicacao | `dados.dtPublicacaoInicio/Fim=01/01/1900..31/12/2099` zerou busca que sem data retornou 22 resultados | nao promover sem novo contrato validado |
 | TST jurisprudencia SPA | `https://jurisprudencia.tst.jus.br/config.json` retorna `base_url=https://jurisprudencia-backend2.tst.jus.br`; `POST /rest/pesquisa-textual/1/2` responde JSON quando payload nao filtra, mas campos reais da SPA (`e`, `ou`, `termoExato`, `ementa`) retornaram HTTP 400 com corpo vazio | candidato tecnico; precisa reproduzir payload exato da SPA antes de provider |
+| TCU pesquisa textual | SPA `https://pesquisa.apps.tcu.gov.br/` retorna HTTP 200; bundle aponta `/api/publico/entidades/busca`; GET retorna HTTP 405 e `Allow: POST,OPTIONS` | candidato tecnico; precisa reproduzir payload POST publico antes de provider |
+| TSE jurisprudencia por assunto | `https://www.tse.jus.br/jurisprudencia/jurisprudencia-por-assunto` retorna HTTP 200 com pagina institucional publica e links de servicos de jurisprudencia | candidato documental/tematico; pode virar catalogo estatico apos fixture |
 | TSE jurisprudencia SPA | bundle Angular aponta para `https://sjur-pesquisa-api.tse.jus.br/{tribunal}/sjur-pesquisa-backend/rest/public/pesquisa`; `POST /public/pesquisa` com JSON de busca retorna HTTP 200 com `Falha na verificação antirrobô.` e resultados vazios | acesso antirrobo; nao promover sem fluxo publico limpo sem captcha |
+| TJAL/TJAM e-SAJ CPOPg com numeros CJSG | `0805753-97.2025.8.02.0000` e `0003949-10.2024.8.04.0000` retornaram formulario com mensagem de inexistencia para CPOPg 1G | nao promover sem numero publico de primeiro grau ou rota CPOSg validada |
+| TJMS e-SAJ CPOPg com numero CJSG | `0000008-16.2011.8.12.0055` retornou pagina E-SAJ sem numero/processo no corpo | nao promover sem nova rota ou caso publico validado |
+| TJAL/TJAC e-SAJ CPOSg5 | `/cposg5/search.do` retornou HTTP 200 e ecoou numeros de processo, mas como formulario com mensagem `O campo Número do Processo deve ser preenchido`, nao como detalhe publico | candidato; precisa payload/rota real de detalhe CPOSg antes de provider |
+| TJAM e-SAJ CPOSg | `/cposg/search.do` e `/cposg/open.do` retornaram HTTP 503; `/cposg5/search.do` redirecionou para portal | fonte instavel/nao promovida |
 | TNU/CJF | `https://www.cjf.jus.br/jurisprudencia/tnu/` fechou a conexao sem resposta no probe limpo | nao promover sem nova rota publica estavel |
 | TJRJ/eJuris | `https://www3.tjrj.jus.br/ejuris/ConsultarJurisprudencia.aspx` retorna WebForms publico com `__VIEWSTATE`, campos de pesquisa e script `https://www.google.com/recaptcha/api.js?render=...` | diagnostics-first; nao promover sem fluxo limpo sem reCAPTCHA |
 | TJCE/CJSG | conexao resetada pelo host remoto em `https://esaj.tjce.jus.br/cjsg/resultadoCompleta.do` | nao promover sem novo endpoint ou janela estavel |

@@ -333,7 +333,8 @@ def _extract_label_values(panel: Tag) -> dict[str, str]:
 
 def _extract_full_text_url(panel: Tag, source_url: str) -> str | None:
     button = panel.select_one('button[title="Exibir Inteiro Teor"]')
-    onclick = button.get("onclick") if button else ""
+    raw_onclick = button.get("onclick") if button else ""
+    onclick = raw_onclick if isinstance(raw_onclick, str) else ""
     match = re.search(r"openInteiroTeor\(['\"]([^'\"]+)", onclick or "")
     if not match:
         return None
@@ -353,7 +354,8 @@ def _extract_uuid(url: str | None) -> str | None:
 
 def _first_data_uuid(panel: Tag) -> str | None:
     button = panel.select_one("button[data-uuid]")
-    value = button.get("data-uuid") if button else None
+    raw_value = button.get("data-uuid") if button else None
+    value = raw_value if isinstance(raw_value, str) else None
     return value if value and UUID_RE.fullmatch(value) else None
 
 

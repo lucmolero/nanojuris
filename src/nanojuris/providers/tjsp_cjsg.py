@@ -258,8 +258,7 @@ class TjspCjsgProvider(JurisprudenceProvider):
             raise SourceUnavailableError(
                 f"TJSP/CJSG rejected request with HTTP {response.status_code}"
             )
-        response.encoding = response.encoding or "utf-8"
-        text = response.text
+        text = decode_cjsg_response_text(response)
         diagnostic = diagnose_cjsg_access(text)
         if diagnostic.access_control_required:
             raise AccessControlRequiredError(
@@ -416,6 +415,22 @@ def parse_cjsg_results(
         results=limited_results,
         source_trace=trace,
     )
+
+
+def decode_cjsg_response_text(response: requests.Response) -> str:
+    """Decode CJSG HTML using the source-declared charset or detected encoding."""
+
+    headers = getattr(response, "headers", {})
+    content_type = headers.get("Content-Type", "")
+    if "charset=" not in content_type.lower():
+        response.encoding = (
+            getattr(response, "apparent_encoding", None)
+            or getattr(response, "encoding", None)
+            or "windows-1252"
+        )
+    elif response.encoding is None:
+        response.encoding = getattr(response, "apparent_encoding", None) or "utf-8"
+    return response.text
 
 
 def cjsg_decision_bundle_to_document(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 from nanojuris.mcp_tools import (
     export_results_tool,
@@ -12,6 +12,7 @@ from nanojuris.mcp_tools import (
     list_courts_tool,
     list_sources_tool,
     search_jurisprudence_tool,
+    search_unified_tool,
     source_diagnostics_tool,
     store_export_run_tool,
     store_get_tool,
@@ -63,9 +64,9 @@ def create_server() -> Any:
         if branch not in allowed:
             raise ValueError("branch must be a known Brazilian judiciary branch")
         return list_courts_tool(
-            branch=branch,
+            branch=cast(Any, branch),
             state=state,
-            source_system=source_system,
+            source_system=cast(Any, source_system),
             implemented=implemented,
         )
 
@@ -82,6 +83,7 @@ def create_server() -> Any:
         courts: list[str] | None = None,
         types: list[str] | None = None,
         number: str = "",
+        source_origin: str = "",
         page: int = 1,
         page_size: int = 10,
         canonical: bool = True,
@@ -94,6 +96,33 @@ def create_server() -> Any:
             courts=courts,
             types=types,
             number=number,
+            source_origin=source_origin,
+            page=page,
+            page_size=page_size,
+            canonical=canonical,
+        )
+
+    @server.tool()
+    def search_unified(
+        text: str = "",
+        sources: list[str] | None = None,
+        courts: list[str] | None = None,
+        types: list[str] | None = None,
+        number: str = "",
+        source_origin: str = "",
+        page: int = 1,
+        page_size: int = 10,
+        canonical: bool = True,
+    ) -> dict[str, Any]:
+        """Search multiple public jurisprudence sources in one MCP call."""
+
+        return search_unified_tool(
+            text,
+            sources=sources,
+            courts=courts,
+            types=types,
+            number=number,
+            source_origin=source_origin,
             page=page,
             page_size=page_size,
             canonical=canonical,
@@ -163,7 +192,7 @@ def create_server() -> Any:
             raise ValueError("kind must be decision, document or precedent")
         return store_query_tool(
             db_path,
-            kind=kind,
+            kind=cast(Any, kind),
             source=source,
             court=court,
             case_number=case_number,
@@ -183,7 +212,7 @@ def create_server() -> Any:
 
         if kind not in {"decision", "document", "precedent"}:
             raise ValueError("kind must be decision, document or precedent")
-        return store_get_tool(db_path, kind, record_id)
+        return store_get_tool(db_path, cast(Any, kind), record_id)
 
     @server.tool()
     def store_runs(db_path: str, limit: int = 50) -> dict[str, Any]:

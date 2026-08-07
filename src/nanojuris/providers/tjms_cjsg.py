@@ -28,6 +28,7 @@ from nanojuris.models import (
 from nanojuris.providers.base import JurisprudenceProvider
 from nanojuris.providers.tjsp_cjsg import (
     cjsg_decision_bundle_to_document,
+    decode_cjsg_response_text,
     diagnose_cjsg_access,
     parse_cjsg_results,
 )
@@ -170,8 +171,7 @@ class TjmsCjsgProvider(JurisprudenceProvider):
             raise SourceUnavailableError(
                 f"TJMS/CJSG rejected request with HTTP {response.status_code}"
             )
-        response.encoding = response.encoding or "utf-8"
-        text = response.text
+        text = decode_cjsg_response_text(response)
         diagnostic = diagnose_cjsg_access(text)
         if diagnostic.access_control_required:
             raise AccessControlRequiredError(

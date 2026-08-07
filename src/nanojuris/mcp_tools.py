@@ -68,6 +68,7 @@ def search_jurisprudence_tool(
     courts: list[str] | None = None,
     types: list[str] | None = None,
     number: str = "",
+    source_origin: str = "",
     page: int = 1,
     page_size: int = 10,
     canonical: bool = True,
@@ -78,6 +79,19 @@ def search_jurisprudence_tool(
     active_client = client or NanoJurisClient()
     normalized_page = _page(page)
     limited_page_size = _limit_page_size(page_size)
+    if source.strip().lower() in {"all", "*", "unified"}:
+        return _to_jsonable(
+            active_client.search_many(
+                text,
+                courts=courts or [],
+                types=types or [],
+                number=number,
+                source_origin=source_origin,
+                page=normalized_page,
+                page_size=limited_page_size,
+                canonical=canonical,
+            )
+        )
     if canonical:
         records = active_client.search_canonical(
             text,
@@ -85,6 +99,7 @@ def search_jurisprudence_tool(
             courts=courts or [],
             types=types or [],
             number=number,
+            source_origin=source_origin,
             page=normalized_page,
             page_size=limited_page_size,
         )
@@ -101,10 +116,42 @@ def search_jurisprudence_tool(
         courts=courts or [],
         types=types or [],
         number=number,
+        source_origin=source_origin,
         page=normalized_page,
         page_size=limited_page_size,
     )
     return _to_jsonable(search_page)
+
+
+def search_unified_tool(
+    text: str = "",
+    *,
+    sources: list[str] | None = None,
+    courts: list[str] | None = None,
+    types: list[str] | None = None,
+    number: str = "",
+    source_origin: str = "",
+    page: int = 1,
+    page_size: int = 10,
+    canonical: bool = True,
+    client: NanoJurisClient | None = None,
+) -> dict[str, Any]:
+    """Search multiple jurisprudence sources and return one unified result list."""
+
+    active_client = client or NanoJurisClient()
+    return _to_jsonable(
+        active_client.search_many(
+            text,
+            sources=sources,
+            courts=courts or [],
+            types=types or [],
+            number=number,
+            source_origin=source_origin,
+            page=_page(page),
+            page_size=_limit_page_size(page_size),
+            canonical=canonical,
+        )
+    )
 
 
 def export_results_tool(
@@ -359,7 +406,7 @@ def _offset(offset: int) -> int:
 
 
 def _to_jsonable(value: object) -> Any:
-    if is_dataclass(value):
+    if is_dataclass(value) and not isinstance(value, type):
         return _to_jsonable(asdict(value))
     if isinstance(value, dict):
         return {str(key): _to_jsonable(item) for key, item in value.items()}

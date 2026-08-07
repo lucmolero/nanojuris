@@ -10,6 +10,7 @@ from nanojuris.mcp_tools import (
     list_courts_tool,
     list_sources_tool,
     search_jurisprudence_tool,
+    search_unified_tool,
     source_diagnostics_tool,
     store_export_run_tool,
     store_get_tool,
@@ -82,9 +83,28 @@ class FakeProvider:
             source="fake",
             display_name="Fonte Fake",
             source_url="https://example.test",
-            category="test",
+            category="court_jurisprudence",
             search_modes=["text"],
             canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
+        )
+
+
+class FailingProvider:
+    name = "failing"
+
+    def search(self, query: JurisprudenceQuery) -> SearchPage:
+        raise RuntimeError("fonte indisponivel")
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(
+            source="failing",
+            display_name="Fonte Falha",
+            source_url="https://example.test/failing",
+            category="court_jurisprudence",
+            search_modes=["text"],
+            canonical_records=["CanonicalDecision"],
+            supports_mcp=True,
         )
 
 
@@ -232,6 +252,38 @@ def test_search_jurisprudence_tool_can_return_normalized_page():
 
     assert payload["source"] == "fake"
     assert payload["results"][0]["id"] == "fake-1"
+
+
+def test_search_jurisprudence_tool_accepts_all_source_alias():
+    payload = search_jurisprudence_tool(
+        "homicidio",
+        source="all",
+        client=NanoJurisClient(providers=[FakeProvider(), FailingProvider()]),
+    )
+
+    assert payload["sources"] == ["failing", "fake"]
+    assert payload["total_returned"] == 1
+    assert payload["results"][0]["case_number"] == "0003938-14.2017.8.26.0323"
+    assert payload["errors"][0]["source"] == "failing"
+
+
+def test_search_unified_tool_returns_results_and_source_errors():
+    payload = search_unified_tool(
+        "homicidio",
+        sources=["fake", "failing"],
+        client=NanoJurisClient(providers=[FakeProvider(), FailingProvider()]),
+    )
+
+    assert payload["sources"] == ["fake", "failing"]
+    assert payload["canonical"] is True
+    assert payload["total_returned"] == 1
+    assert payload["errors"] == [
+        {
+            "source": "failing",
+            "error_type": "RuntimeError",
+            "message": "fonte indisponivel",
+        }
+    ]
 
 
 def test_export_results_tool_returns_requested_format():

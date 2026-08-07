@@ -139,9 +139,7 @@ def test_provider_get_decisions_downloads_trf4_full_text():
         session=session,
     )
 
-    bundle = provider.get_decisions(
-        "trf4-eproc-jurisprudencia-41785517964304066196063791796"
-    )
+    bundle = provider.get_decisions("trf4-eproc-jurisprudencia-41785517964304066196063791796")
 
     assert bundle.source == "trf4_eproc_jurisprudencia"
     assert bundle.raw["id_jurisprudencia"] == "41785517964304066196063791796"
@@ -157,9 +155,7 @@ def test_provider_get_document_returns_canonical_document():
         session=session,
     )
 
-    document = provider.get_document(
-        "trf4-eproc-jurisprudencia-41785517964304066196063791796"
-    )
+    document = provider.get_document("trf4-eproc-jurisprudencia-41785517964304066196063791796")
 
     assert document.source == "trf4_eproc_jurisprudencia"
     assert document.content_type == "text/html"

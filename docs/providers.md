@@ -17,6 +17,73 @@ O checklist completo para implementar novas fontes esta em
 Antes de implementar uma rota nova, use o fluxo economico de descoberta em
 [source-discovery.md](source-discovery.md).
 
+## Providers oficiais de SP adicionados
+
+As fontes abaixo foram priorizadas porque expõem conteúdo oficial em HTML
+publico, acessivel com sessao HTTP limpa e sem captcha/login no fluxo
+automatizado.
+
+### `tjsp_nugepnac`
+
+Provider para catalogos oficiais TJSP/NugepNac de IRDR e IAC.
+
+Rotas publicas usadas:
+
+```text
+GET /NugepNac/Irdr
+GET /NugepNac/Iac
+GET /NugepNac/(Irdr|Iac)/DetalheTema?codigoNoticia=<id>&pagina=1
+```
+
+Campos extraidos: numero do tema, tipo de precedente, status, processo
+paradigma, assunto, orgao julgador, relator, datas, questao submetida,
+tese firmada e links relacionados. O resultado canonico e
+`CanonicalPrecedent`.
+
+Limitacao importante: as paginas de detalhe sao publicas, mas alguns links de
+acordaos CJSG podem redirecionar para verificacao de acesso. O provider nao
+tenta contornar captcha, login ou controles de acesso.
+
+### `tce_sp_jurisprudencia`
+
+Provider para repertorio publico de sumulas e publicacoes do boletim de
+jurisprudencia do TCE-SP.
+
+Rotas publicas usadas:
+
+```text
+GET /boletim-de-jurisprudencia/sumulas
+GET /boletim-de-jurisprudencia/publicacoes
+GET /boletim-de-jurisprudencia/indice-alfabetico-remissivo
+```
+
+Campos extraidos: numero da sumula, enunciado, historico/fundamento quando
+disponivel, edicao do boletim e URL publica da publicacao. O resultado canonico
+e `CanonicalPrecedent`.
+
+Limitacao importante: a busca dinamica `/jurisprudencia/pesquisar` usa
+reCAPTCHA no fluxo observado e nao e automatizada. O provider cobre os
+catalogos estaticos publicos.
+
+### `tre_sp_temas`
+
+Provider para paginas publicas de temas selecionados de jurisprudencia do
+TRE-SP.
+
+Rotas publicas usadas:
+
+```text
+GET /jurisprudencia/temas-selecionados-1
+GET /jurisprudencia/arquivos-da-secao-de-jurisprudencia-sp/temas-selecionados/<slug>
+```
+
+Campos extraidos: tema, resumo textual da pagina, links de decisoes/documentos
+selecionados e URL publica de origem. O resultado canonico e
+`CanonicalPrecedent`.
+
+Limitacao importante: e uma fonte tematica curada, nao uma busca geral de
+acordaos eleitorais. Links de inteiro teor podem apontar para sistemas externos.
+
 ## `comunica_pje`
 
 Provider para comunicacoes judiciais publicas do Comunica PJe/DJEN.
@@ -681,6 +748,8 @@ dtDecisaoInicio
 dtDecisaoFim
 dtPublicacaoInicio
 dtPublicacaoFim
+selOrigem[]
+selTipoDocumento[]
 ```
 
 Campos extraidos:
@@ -697,7 +766,23 @@ summary
 document_url
 full_text_url
 id_jurisprudencia
+source_origin
 ```
+
+Filtros oficiais validados:
+
+```text
+source_origin="colegio_recursal" -> selOrigem[]=3
+source_origin="primeiro_grau" -> selOrigem[]=4
+source_origin="segundo_grau" -> selOrigem[]=5
+types=["acordao"] -> selTipoDocumento[]=1
+types=["sentenca"] -> selTipoDocumento[]=5
+```
+
+Para pesquisas de jurisprudencia de maior qualidade em SP, prefira combinar
+`source_origin="segundo_grau"` com `types=["acordao"]`. Na descoberta limpa,
+essa combinacao reduziu a mistura com sentencas de primeiro grau e retornou
+cards de acordaos de camaras do TJSP.
 
 `full_text_url` e preservado como metadado quando a fonte publica o informa, mas
 na validacao live a rota de inteiro teor separada redirecionou/retornou controle
@@ -718,6 +803,13 @@ from nanojuris import NanoJurisClient
 
 client = NanoJurisClient()
 page = client.search("infanticidio", source="tjsp_eproc_jurisprudencia", page_size=5)
+page = client.search(
+  "desconsideracao personalidade juridica",
+  source="tjsp_eproc_jurisprudencia",
+  source_origin="segundo_grau",
+  types=["acordao"],
+  page_size=5,
+)
 records = client.search_canonical("infanticidio", source="tjsp_eproc_jurisprudencia")
 ```
 
@@ -831,3 +923,70 @@ O teste live aceita dois comportamentos corretos:
 
 - resultados publicos parseados;
 - controle de acesso detectado explicitamente.
+
+## `tjac_esaj_cpopg`
+
+Provider para consulta processual publica de primeiro grau no e-SAJ/TJAC.
+
+### Escopo
+
+```text
+GET /cpopg/search.do?cbPesquisa=NUMPROC&...
+GET /cpopg/show.do?processo.codigo=<codigo>&processo.foro=<foro>&processo.numero=<numero>
+```
+
+O fluxo por numero CNJ consulta `search.do`, segue o redirect oficial para
+`show.do` e normaliza o HTML publico como `CanonicalDocument`. Nesta primeira
+promocao, apenas busca por numero CNJ foi declarada para TJAC; buscas por
+nome/OAB ficam pendentes de probe limpo proprio.
+
+Probe limpo promovido:
+
+```text
+0001970-91.2024.8.01.0001 -> show.do publico com classe, assunto, foro, vara,
+partes, movimentacoes e URL final oficial.
+```
+
+Campos extraidos:
+
+```text
+numero do processo
+status
+classe
+assunto
+foro
+vara
+distribuicao
+controle
+area
+partes em texto publico
+movimentacoes em texto publico
+partes estruturadas quando o HTML permite
+movimentacoes estruturadas quando o HTML permite
+URL publica final
+```
+
+### Uso
+
+```bash
+nanojuris documento "0001970-91.2024.8.01.0001" --fonte tjac_esaj_cpopg
+nanojuris buscar "" --fonte tjac_esaj_cpopg --numero "0001970-91.2024.8.01.0001"
+```
+
+Python:
+
+```python
+from nanojuris import NanoJurisClient
+
+client = NanoJurisClient()
+document = client.get_document(
+  "0001970-91.2024.8.01.0001",
+  source="tjac_esaj_cpopg",
+)
+```
+
+### Controle de acesso
+
+O provider usa apenas sessao HTTP limpa. Autos, anexos, segredo de justica,
+login, captcha e validacoes adicionais sao tratados como limite da fonte, sem
+bypass.

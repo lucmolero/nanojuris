@@ -15,6 +15,7 @@ from nanojuris.models import (
     CanonicalPrecedent,
     DecisionBundle,
     JurisprudenceQuery,
+    JurisprudenceResult,
     ProviderCapabilities,
     ProviderCatalog,
     SearchPage,
@@ -24,7 +25,9 @@ from nanojuris.providers.bnp_pangea import BnpPangeaProvider
 from nanojuris.providers.comunica_pje import ComunicaPjeProvider
 from nanojuris.providers.stj_scon import StjSconProvider
 from nanojuris.providers.stm_jurisprudencia import StmJurisprudenciaProvider
+from nanojuris.providers.tce_sp_jurisprudencia import TceSpJurisprudenciaProvider
 from nanojuris.providers.tjac_cjsg import TjacCjsgProvider
+from nanojuris.providers.tjac_esaj_cpopg import TjacEsajCpopgProvider
 from nanojuris.providers.tjal_cjsg import TjalCjsgProvider
 from nanojuris.providers.tjam_cjsg import TjamCjsgProvider
 from nanojuris.providers.tjdf_juris import TjdfJurisProvider
@@ -32,10 +35,13 @@ from nanojuris.providers.tjms_cjsg import TjmsCjsgProvider
 from nanojuris.providers.tjsp_cjsg import TjspCjsgProvider
 from nanojuris.providers.tjsp_eproc_jurisprudencia import TjspEprocJurisprudenciaProvider
 from nanojuris.providers.tjsp_esaj_cpopg import TjspEsajCpopgProvider
+from nanojuris.providers.tjsp_nugepnac import TjspNugepnacProvider
+from nanojuris.providers.tre_sp_temas import TreSpTemasProvider
 from nanojuris.providers.trf4_eproc_jurisprudencia import Trf4EprocJurisprudenciaProvider
 from nanojuris.store import ResearchRun, SQLiteStore
 
 CanonicalSearchRecord = CanonicalDecision | CanonicalPrecedent
+UnifiedSearchRecord = CanonicalSearchRecord | JurisprudenceResult
 
 
 class NanoJurisClient:
@@ -55,7 +61,9 @@ class NanoJurisClient:
                 ComunicaPjeProvider(self.config),
                 StjSconProvider(self.config),
                 StmJurisprudenciaProvider(self.config),
+                TceSpJurisprudenciaProvider(self.config),
                 TjacCjsgProvider(self.config),
+                TjacEsajCpopgProvider(self.config),
                 TjdfJurisProvider(self.config),
                 TjalCjsgProvider(self.config),
                 TjamCjsgProvider(self.config),
@@ -63,6 +71,8 @@ class NanoJurisClient:
                 TjspCjsgProvider(self.config),
                 TjspEprocJurisprudenciaProvider(self.config),
                 TjspEsajCpopgProvider(self.config),
+                TjspNugepnacProvider(self.config),
+                TreSpTemasProvider(self.config),
                 Trf4EprocJurisprudenciaProvider(self.config),
             ]
         )
@@ -105,6 +115,8 @@ class NanoJurisClient:
             precatory_number=str(filters.get("precatory_number") or ""),
             police_document=str(filters.get("police_document") or ""),
             cda=str(filters.get("cda") or ""),
+            source_origin=str(filters.get("source_origin") or filters.get("origin") or ""),
+            source_origins=list(filters.get("source_origins") or filters.get("origins") or []),
             fetch_details=bool(filters.get("fetch_details") or False),
         )
         return self._provider(source).search(query)
@@ -132,6 +144,69 @@ class NanoJurisClient:
             **filters,
         )
         return search_page_to_canonical(search_page)
+
+    def search_many(
+        self,
+        text: str = "",
+        *,
+        sources: list[str] | None = None,
+        courts: list[str] | None = None,
+        types: list[str] | None = None,
+        page: int = 1,
+        page_size: int = 10,
+        canonical: bool = True,
+        continue_on_error: bool = True,
+        **filters: Any,
+    ) -> dict[str, Any]:
+        """Search multiple jurisprudence sources and return one aggregated payload."""
+
+        selected_sources = sources or self._default_unified_sources()
+        results: list[UnifiedSearchRecord] = []
+        errors: list[dict[str, str]] = []
+        for source in selected_sources:
+            try:
+                if canonical:
+                    results.extend(
+                        self.search_canonical(
+                            text,
+                            source=source,
+                            courts=courts,
+                            types=types,
+                            page=page,
+                            page_size=page_size,
+                            **filters,
+                        )
+                    )
+                else:
+                    page_result = self.search(
+                        text,
+                        source=source,
+                        courts=courts,
+                        types=types,
+                        page=page,
+                        page_size=page_size,
+                        **filters,
+                    )
+                    results.extend(page_result.results)
+            except Exception as exc:
+                if not continue_on_error:
+                    raise
+                errors.append(
+                    {
+                        "source": source,
+                        "error_type": type(exc).__name__,
+                        "message": str(exc),
+                    }
+                )
+        return {
+            "sources": selected_sources,
+            "page": page,
+            "page_size": page_size,
+            "canonical": canonical,
+            "total_returned": len(results),
+            "results": results,
+            "errors": errors,
+        }
 
     def search_and_store(
         self,
@@ -251,6 +326,13 @@ class NanoJurisClient:
             suggestions = provider.list_suggestions(text)  # type: ignore[attr-defined]
             return list(suggestions)
         return []
+
+    def _default_unified_sources(self) -> list[str]:
+        return [
+            capability.source
+            for capability in self.list_sources()
+            if capability.category == "court_jurisprudence" and capability.supports_mcp
+        ]
 
     def _provider(self, source: str) -> JurisprudenceProvider:
         try:

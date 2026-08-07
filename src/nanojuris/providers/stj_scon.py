@@ -285,7 +285,7 @@ def _extract_registry(anchor: Any) -> str:
 
 def _looks_like_access_control(html: str) -> bool:
     lowered = html.lower()
-    if "id=\"resultados\"" in lowered or "class=\"documento\"" in lowered:
+    if 'id="resultados"' in lowered or 'class="documento"' in lowered:
         return False
     if "challenge-error-text" in lowered or "cf-error" in lowered:
         return True

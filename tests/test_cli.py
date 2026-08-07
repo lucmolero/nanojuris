@@ -306,9 +306,7 @@ def test_cli_store_records_accepts_offset(tmp_path, capsys):
     db_path = tmp_path / "nanojuris.db"
     run_id = _seed_run(db_path)
 
-    exit_code = main(
-        ["store", "records", str(db_path), run_id, "--limite", "1", "--offset", "1"]
-    )
+    exit_code = main(["store", "records", str(db_path), run_id, "--limite", "1", "--offset", "1"])
 
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
