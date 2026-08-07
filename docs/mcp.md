@@ -140,6 +140,8 @@ Para uso por agentes, a resposta tambem separa roteamento semantico:
 - `searched_sources`: fontes efetivamente consultadas;
 - `skipped_sources`: fontes nao chamadas porque nao se aplicam ao tipo de
   pergunta, com `reason` e `message` explicitos;
+- `routing_summary`: explicacao curta, pronta para agentes, sobre fontes
+  consultadas, puladas ou com falha;
 - `errors`: fontes chamadas que falharam por indisponibilidade, captcha,
   controle de acesso ou mudanca de contrato.
 

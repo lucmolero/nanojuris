@@ -217,6 +217,20 @@ def test_client_search_many_unifies_results_and_keeps_source_errors():
             "message": "fonte indisponivel",
         }
     ]
+    assert payload["routing_summary"] == [
+        {
+            "source": "fake",
+            "action": "searched",
+            "reason": "source_applicable",
+            "message": "A fonte foi consultada por cobrir jurisprudencia textual publica.",
+        },
+        {
+            "source": "failing",
+            "action": "failed",
+            "reason": "RuntimeError",
+            "message": "fonte indisponivel",
+        },
+    ]
 
 
 def test_client_search_many_reports_skipped_sources_by_semantic_reason():
@@ -245,6 +259,32 @@ def test_client_search_many_reports_skipped_sources_by_semantic_reason():
         {
             "source": "communications",
             "category": "judicial_communications",
+            "reason": "not_jurisprudence_source",
+            "message": (
+                "A fonte retorna comunicacoes/intimacoes judiciais, nao julgados "
+                "de jurisprudencia para estudo jurimetrico."
+            ),
+        },
+    ]
+    assert payload["routing_summary"] == [
+        {
+            "source": "fake",
+            "action": "searched",
+            "reason": "source_applicable",
+            "message": "A fonte foi consultada por cobrir jurisprudencia textual publica.",
+        },
+        {
+            "source": "case_lookup",
+            "action": "skipped",
+            "reason": "case_lookup_requires_identifier",
+            "message": (
+                "Consulta processual exige numero CNJ, parte, documento, OAB "
+                "ou outro identificador; nao e uma busca textual de jurisprudencia."
+            ),
+        },
+        {
+            "source": "communications",
+            "action": "skipped",
             "reason": "not_jurisprudence_source",
             "message": (
                 "A fonte retorna comunicacoes/intimacoes judiciais, nao julgados "

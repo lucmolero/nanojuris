@@ -53,6 +53,10 @@ def _fixture_html() -> str:
     return (FIXTURES / "tjsp_cjsg_result.html").read_text(encoding="utf-8")
 
 
+def _fixture(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
 def test_parse_cjsg_results_maps_fixture():
     trace = SourceTrace(provider="tjsp_cjsg", endpoint="/resultadoCompleta.do")
 
@@ -139,24 +143,15 @@ def test_provider_get_document_returns_canonical_document():
 
 
 def test_provider_detects_access_control_without_bypass():
-    session = FakeSession([FakeResponse("<html><div class='g-recaptcha'></div></html>")])
+    session = FakeSession([FakeResponse(_fixture("tjsp_cjsg_access_control.html"))])
     provider = TjspCjsgProvider(session=session)
 
-    with pytest.raises(AccessControlRequiredError, match="has_recaptcha_widget"):
+    with pytest.raises(AccessControlRequiredError, match="has_recaptcha_field"):
         provider.search(JurisprudenceQuery(text="teste"))
 
 
 def test_diagnose_cjsg_access_identifies_returned_form_with_captcha_fields():
-    html = """
-    <html>
-        <form name="consultaCompletaForm">
-            <input name="recaptcha_response_token" />
-            <input name="uuidCaptcha" />
-        </form>
-        <script src="/sajcas/verificarLogin.js"></script>
-        <script src="/cjsg/captchaControleAcesso.do"></script>
-    </html>
-    """
+    html = _fixture("tjsp_cjsg_access_control.html")
 
     diagnostic = diagnose_cjsg_access(html)
 
@@ -167,6 +162,19 @@ def test_diagnose_cjsg_access_identifies_returned_form_with_captcha_fields():
     assert diagnostic.has_uuid_captcha_field is True
     assert diagnostic.has_access_control_route is True
     assert diagnostic.has_login_script is True
+
+
+def test_parse_cjsg_results_accepts_empty_result_page():
+    page = parse_cjsg_results(
+        _fixture("tjsp_cjsg_empty.html"),
+        query=JurisprudenceQuery(text="termo sem resultado"),
+        trace=SourceTrace(provider="tjsp_cjsg", endpoint="/resultadoCompleta.do"),
+        base_url="https://esaj.tjsp.jus.br/cjsg",
+    )
+
+    assert page.source == "tjsp_cjsg"
+    assert page.total == 0
+    assert page.results == []
 
 
 def test_diagnose_cjsg_access_does_not_flag_result_page_as_blocked():

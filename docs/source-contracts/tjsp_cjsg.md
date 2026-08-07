@@ -110,13 +110,13 @@ publica quando a consulta for bloqueada.
 
 - resultado CJSG com ementa;
 - pagina com captcha/access-control;
+- pagina de zero resultado;
 - inteiro teor publico;
-- zero resultado.
 
 ## Proximos passos
 
-- [ ] Criar fixture especifica para `diagnose_cjsg_access`.
-- [ ] Criar fixture de zero resultado.
+- [x] Criar fixture especifica para `diagnose_cjsg_access`.
+- [x] Criar fixture de zero resultado.
 - [ ] Criar fixture de inteiro teor publico com hash e tamanho.
 - [ ] Documentar variacoes de `classe/assunto` por area.
 - [ ] Promover dossie da familia CJSG/e-SAJ para ser reutilizado por TJAC,

@@ -57,6 +57,24 @@ class RoutedSources:
     skipped: list[SourceSkip]
 
 
+@dataclass(frozen=True, slots=True)
+class RoutingSummaryItem:
+    """Human-readable routing explanation for agents and CLI users."""
+
+    source: str
+    action: str
+    reason: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "source": self.source,
+            "action": self.action,
+            "reason": self.reason,
+            "message": self.message,
+        }
+
+
 def route_unified_sources(
     *,
     selected_sources: list[str],
@@ -88,6 +106,49 @@ def route_unified_sources(
             skipped.append(skip)
 
     return RoutedSources(searched=searched, skipped=skipped)
+
+
+def build_routing_summary(
+    *,
+    routed: RoutedSources,
+    capabilities: dict[str, ProviderCapabilities],
+    errors: list[dict[str, str]],
+) -> list[RoutingSummaryItem]:
+    """Build a concise explanation of routing decisions."""
+
+    summary: list[RoutingSummaryItem] = []
+    failed_sources = {error["source"] for error in errors}
+    for source in routed.searched:
+        capability = capabilities.get(source)
+        if source in failed_sources:
+            continue
+        summary.append(
+            RoutingSummaryItem(
+                source=source,
+                action="searched",
+                reason="source_applicable",
+                message=_searched_message(capability),
+            )
+        )
+    for skip in routed.skipped:
+        summary.append(
+            RoutingSummaryItem(
+                source=skip.source,
+                action="skipped",
+                reason=skip.reason,
+                message=skip.message,
+            )
+        )
+    for error in errors:
+        summary.append(
+            RoutingSummaryItem(
+                source=error["source"],
+                action="failed",
+                reason=error["error_type"],
+                message=error["message"],
+            )
+        )
+    return summary
 
 
 def _skip_reason(
@@ -152,3 +213,19 @@ def _has_value(value: Any) -> bool:
     if isinstance(value, list | tuple | set):
         return bool(value)
     return bool(value)
+
+
+def _searched_message(capability: ProviderCapabilities | None) -> str:
+    if capability is None:
+        return "A fonte foi consultada porque foi solicitada explicitamente."
+    if capability.category == "case_lookup":
+        return "A fonte foi consultada porque havia identificador processual suficiente."
+    if capability.category == "qualified_precedents":
+        return "A fonte foi consultada por cobrir precedentes qualificados."
+    if capability.category == "court_precedents":
+        return "A fonte foi consultada por cobrir precedentes do tribunal."
+    if capability.category == "administrative_jurisprudence":
+        return "A fonte foi consultada por cobrir jurisprudencia administrativa publica."
+    if capability.category == "electoral_jurisprudence":
+        return "A fonte foi consultada por cobrir jurisprudencia eleitoral publica."
+    return "A fonte foi consultada por cobrir jurisprudencia textual publica."

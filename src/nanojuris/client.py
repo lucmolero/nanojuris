@@ -38,7 +38,7 @@ from nanojuris.providers.tjsp_esaj_cpopg import TjspEsajCpopgProvider
 from nanojuris.providers.tjsp_nugepnac import TjspNugepnacProvider
 from nanojuris.providers.tre_sp_temas import TreSpTemasProvider
 from nanojuris.providers.trf4_eproc_jurisprudencia import Trf4EprocJurisprudenciaProvider
-from nanojuris.routing import route_unified_sources
+from nanojuris.routing import build_routing_summary, route_unified_sources
 from nanojuris.source_contracts import (
     SourceContractAssessment,
     assess_source_contract,
@@ -218,6 +218,14 @@ class NanoJurisClient:
             "sources": selected_sources,
             "searched_sources": routing.searched,
             "skipped_sources": [skip.to_dict() for skip in routing.skipped],
+            "routing_summary": [
+                item.to_dict()
+                for item in build_routing_summary(
+                    routed=routing,
+                    capabilities=capabilities,
+                    errors=errors,
+                )
+            ],
             "page": page,
             "page_size": page_size,
             "canonical": canonical,

@@ -39,6 +39,10 @@ def _fixture_html() -> str:
     return (FIXTURES / "stj_scon_acordaos_result.html").read_text(encoding="utf-8")
 
 
+def _fixture(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
 def test_parse_stj_scon_results_maps_fixture():
     trace = SourceTrace(provider="stj_scon", endpoint="/SCON/acordaos/")
 
@@ -130,8 +134,21 @@ def test_client_search_canonical_maps_stj_scon_to_decision():
     assert first.document_url is not None
 
 
+def test_parse_stj_scon_results_accepts_empty_result_page():
+    page = parse_stj_scon_results(
+        _fixture("stj_scon_empty.html"),
+        query=JurisprudenceQuery(text="termo sem resultado"),
+        trace=SourceTrace(provider="stj_scon", endpoint="/SCON/acordaos/"),
+        base_url="https://processo.stj.jus.br",
+    )
+
+    assert page.source == "stj_scon"
+    assert page.total == 0
+    assert page.results == []
+
+
 def test_provider_detects_access_control_without_bypass():
-    session = FakeSession([FakeResponse("<html><div class='g-recaptcha'></div></html>")])
+    session = FakeSession([FakeResponse(_fixture("stj_scon_access_control.html"))])
     provider = StjSconProvider(session=session)
 
     with pytest.raises(AccessControlRequiredError):

@@ -98,6 +98,7 @@ mais adequadas e traga os metadados principais.
 | --- | --- |
 | `searched_sources` | Fontes realmente chamadas. |
 | `skipped_sources` | Fontes puladas porque nao se aplicavam a pergunta. |
+| `routing_summary` | Explicacao pronta para o usuario sobre consultar, pular ou falhar. |
 | `errors` | Fontes chamadas que falharam por erro real, acesso ou contrato. |
 
 Isso evita falso diagnostico. Uma consulta textual como `idpj` nao deve chamar

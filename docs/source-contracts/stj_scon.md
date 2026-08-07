@@ -74,9 +74,9 @@ Recomendacao: fonte estrategica, mas ainda inicial. O agente deve:
 
 ## Fixtures esperadas
 
-- `tests/fixtures/stj_scon_acordaos_result.html`;
-- `tests/fixtures/stj_scon_access_control.html`;
-- `tests/fixtures/stj_scon_empty.html`;
+- `tests/fixtures/stj_scon_acordaos_result.html` implementada;
+- `tests/fixtures/stj_scon_access_control.html` implementada;
+- `tests/fixtures/stj_scon_empty.html` implementada;
 - futura fixture de inteiro teor publico, somente se a URL responder sem
   bypass.
 
@@ -85,5 +85,5 @@ Recomendacao: fonte estrategica, mas ainda inicial. O agente deve:
 - [ ] Capturar HAR publico limpo de busca simples.
 - [ ] Reduzir headers ao minimo necessario.
 - [ ] Documentar parametros obrigatorios/opcionais em detalhe.
-- [ ] Adicionar fixtures de acesso controlado e vazio.
+- [x] Adicionar fixtures de acesso controlado e vazio.
 - [ ] Reavaliar nivel de contrato para 3 quando o dossie HTTP estiver completo.
