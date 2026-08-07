@@ -270,7 +270,19 @@ def _signals(text: str, patterns: Mapping[str, str]) -> dict[str, bool]:
 def _access_signals(*, raw_text: str, visible_text: str) -> dict[str, bool]:
     signals = _signals(visible_text, ACCESS_SIGNAL_PATTERNS)
     raw_signals = _signals(raw_text, ACCESS_SIGNAL_PATTERNS)
-    for name in ("turnstile", "cloudflare", "empty_session", "access_denied"):
+    challenge_visible = bool(
+        re.search(
+            r"\b(?:enable\s+javascript\s+and\s+cookies|just\s+a\s+moment|"
+            r"attention\s+required|cloudflare\s+ray|checking\s+your\s+browser|"
+            r"verifica[cç][aã]o\s+humana|managed\s+challenge)\b",
+            visible_text,
+        )
+    )
+    signals["turnstile"] = signals["turnstile"] or (raw_signals["turnstile"] and challenge_visible)
+    signals["cloudflare"] = signals["cloudflare"] or (
+        raw_signals["cloudflare"] and challenge_visible
+    )
+    for name in ("empty_session", "access_denied"):
         signals[name] = raw_signals[name]
     signals["captcha"] = signals["captcha"] or bool(
         re.search(r"\b(?:digite\s+os\s+n[uú]meros|informe\s+o\s+c[oó]digo)\b", visible_text)

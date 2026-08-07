@@ -37,8 +37,12 @@ segredo de justica ou controles de acesso.
 | P0 | TJBA jurisprudencia GraphQL | rota publica estruturada validada; retorna decisoes, ementa, relator, orgao julgador e numero processual | `CanonicalDecision` via JSON estruturado |
 | P0 | TJPR jurisprudencia HTML | rota publica validada com resultado, relator, orgao julgador, ementa e paginacao | `CanonicalDecision` via parser HTML |
 | P0 | TJSC/eproc jurisprudencia | formulario publico eproc validado; potencial de reuso por familia tecnica | `CanonicalDecision` e contrato `eproc_jurisprudencia` |
+| P0 | TNU/eproc jurisprudencia | POST publico validado em `listar_resultados`; reuso direto da familia eproc | `CanonicalDecision` federal/TNU com inteiro teor publico quando disponivel |
+| P0 | TRF6/eproc jurisprudencia | POST publico validado em `listar_resultados`; cobre TRF6, TRU6, Turmas Recursais e Varas Federais | `CanonicalDecision` federal com origens eproc |
+| P0 | TJGO/Projudi jurisprudencia | POST publico validado; resultado HTML contem alto volume, processo, orgao, magistrado, decisao e inteiro teor embutido | `CanonicalDecision` via parser HTML Projudi |
 | P0 | STJ jurisprudencia/SCON | provider inicial `stj_scon` com parser offline; ficha em [stj-source-profile.md](stj-source-profile.md) | acordaos como `CanonicalDecision`; inteiro teor em fase futura |
 | P0 | STF jurisprudencia | provider inicial `stf_juris` via API JSON observada por HAR; WAF/SSL diagnosticados | acordaos como `CanonicalDecision`; inteiro teor como URL ate validar documento sem 403 |
+| P1 | TJMA/Jurisconsult metadados e sumulas | API publica limpa para relatorios, tipos, orgaos e links de sumulas/IAC/IRDR; busca principal exige captcha | `CanonicalPrecedent`/catalogo parcial; nao automatizar acordaos sem fluxo limpo |
 | P1 | TST jurisprudencia publica | SPA com backend identificado, mas payload exato ainda nao promovido | decisoes trabalhistas apos probe limpo |
 | P1 | TSE jurisprudencia publica | backend oficial identificado, mas retorno antirrobo observado | decisoes eleitorais somente se fluxo limpo existir |
 | P1 | DataJud/CNJ | cobertura nacional estruturada por processo e classe | metadados nacionais e ponte para jurimetria |
@@ -62,7 +66,11 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `tjba_graphql`: GraphQL publico de jurisprudencia do TJBA;
 - `tjpr_juris`: HTML publico de jurisprudencia do TJPR;
 - `eproc_jurisprudencia`: familia eproc para TJSC e tribunais que exponham
-  pesquisa publica equivalente;
+  pesquisa publica equivalente, incluindo TNU e TRF6;
+- `projudi_jurisprudencia`: HTML publico de jurisprudencia/atos judiciais do
+  TJGO quando o POST limpo retornar resultados sem validacao humana;
+- `tjma_jurisconsult`: API publica parcial para metadados, filtros e links de
+  precedentes/sumulas; busca principal fica bloqueada enquanto exigir captcha;
 - `esaj`: familia Softplan/e-SAJ para tribunais que compartilham padroes;
 - `eproc`: familia eproc, com pesquisa publica quando disponivel;
 - `pje`: familia PJe, normalmente com maior incidencia de controle de acesso;

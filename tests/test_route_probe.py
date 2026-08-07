@@ -140,6 +140,61 @@ def test_analyze_route_response_does_not_block_global_recaptcha_script():
     assert result.access_signals["recaptcha"] is False
 
 
+def test_analyze_route_response_does_not_block_global_turnstile_assets():
+    html = """
+    <html>
+      <body>
+        <main>
+          <p>1357643 resultados encontrados para o filtro da pesquisa</p>
+          <p>Processo 5730482-09.2026.8.09.0051. Ementa. Relator.</p>
+          <a>Baixar Inteiro teor</a>
+        </main>
+        <!-- src="https://challenges.cloudflare.com/turnstile/v0/api.js" -->
+        <script>const label = "cloudflare turnstile";</script>
+      </body>
+    </html>
+    """
+
+    result = analyze_route_response(
+        url="https://example.test/jurisprudencia",
+        final_url="https://example.test/jurisprudencia",
+        method="POST",
+        status_code=200,
+        content=html.encode(),
+        content_type="text/html",
+        expected_texts=["resultados encontrados"],
+    )
+
+    assert result.route_status == "live_valid"
+    assert result.access_signals["turnstile"] is False
+    assert result.access_signals["cloudflare"] is False
+
+
+def test_analyze_route_response_blocks_cloudflare_challenge_page():
+    html = """
+    <html>
+      <head><title>Just a moment...</title></head>
+      <body>
+        Enable JavaScript and cookies to continue.
+        Cloudflare Ray ID: abc123
+        <script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>
+      </body>
+    </html>
+    """
+
+    result = analyze_route_response(
+        url="https://example.test/jurisprudencia",
+        final_url="https://example.test/jurisprudencia",
+        method="GET",
+        status_code=403,
+        content=html.encode(),
+        content_type="text/html",
+    )
+
+    assert result.route_status == "access_control_or_login"
+    assert result.access_signals["cloudflare"] is True
+
+
 def test_analyze_route_response_scores_structured_json_candidate():
     body = b'{"items":[{"numero":"0000001-10.2024.8.26.0100","ementa":"IDPJ"}]}'
 

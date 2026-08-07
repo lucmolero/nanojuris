@@ -13,6 +13,9 @@ Comece pelos providers de maior impacto:
 - `stj_scon.md`: fonte superior estrategica, ainda em contrato inicial.
 - `bnp_pangea.md`: precedentes qualificados nacionais.
 - `trf4_eproc_jurisprudencia.md`: eproc federal com bom potencial de inteiro teor.
+- `eproc_jurisprudencia_federal.md`: TNU/TRF6 como expansao federal da familia eproc.
+- `tjgo_projudi_jurisprudencia.md`: PROJUDI/TJGO com resultado HTML publico e inteiro teor embutido.
+- `tjma_jurisconsult.md`: API TJMA parcial para metadados, sumulas/IAC/IRDR; busca principal com captcha.
 
 Use `nanojuris contratos --fonte <provider>` para comparar o dossie com a
 matriz viva declarada pelo codigo.
