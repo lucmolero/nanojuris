@@ -18,7 +18,7 @@ from nanojuris.exporters import (
     to_csv,
     to_jsonl,
 )
-from nanojuris.route_probe import parse_json_object, parse_key_value_pairs, probe_route
+from nanojuris.route_probe import parse_json_payload, parse_key_value_pairs, probe_route
 from nanojuris.source_contracts import summarize_contracts
 from nanojuris.store import SQLiteStore
 
@@ -152,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
     probe_rota.add_argument(
         "--json",
         default="",
-        help='Payload JSON como objeto. Ex.: \'{"q":"idpj"}\'',
+        help='Payload JSON como objeto ou array. Ex.: \'{"q":"idpj"}\' ou \'["TSE"]\'',
     )
     probe_rota.add_argument(
         "--json-file",
@@ -378,9 +378,9 @@ def main(argv: list[str] | None = None) -> int:
             if args.json and args.json_file:
                 raise ValueError("Use apenas um entre --json e --json-file")
             if args.json:
-                json_payload = parse_json_object(args.json)
+                json_payload = parse_json_payload(args.json)
             if args.json_file:
-                json_payload = parse_json_object(_read_text_file(args.json_file))
+                json_payload = parse_json_payload(_read_text_file(args.json_file))
             result = probe_route(
                 args.url,
                 method=args.metodo,

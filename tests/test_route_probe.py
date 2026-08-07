@@ -5,6 +5,7 @@ import pytest
 from nanojuris.route_probe import (
     analyze_route_response,
     parse_json_object,
+    parse_json_payload,
     parse_key_value_pairs,
 )
 
@@ -195,6 +196,59 @@ def test_analyze_route_response_blocks_cloudflare_challenge_page():
     assert result.access_signals["cloudflare"] is True
 
 
+def test_analyze_route_response_blocks_cloudfront_request_blocked():
+    html = """
+    <html>
+      <head><title>ERROR: The request could not be satisfied</title></head>
+      <body>403 ERROR The request could not be satisfied. Request blocked.</body>
+    </html>
+    """
+
+    result = analyze_route_response(
+        url="https://example.test/jurisprudencia",
+        final_url="https://example.test/jurisprudencia",
+        method="GET",
+        status_code=403,
+        content=html.encode(),
+        content_type="text/html",
+    )
+
+    assert result.route_status == "access_control_or_login"
+    assert result.access_signals["request_blocked"] is True
+
+
+def test_analyze_route_response_blocks_json_captcha_image_challenge():
+    body = b'{"mensagem":null,"tokenDesafio":"abc123","imagem":"/9j/4AAQSkZJRg"}'
+
+    result = analyze_route_response(
+        url="https://example.test/juris-backend/api/documentos",
+        final_url="https://example.test/juris-backend/api/documentos",
+        method="POST",
+        status_code=200,
+        content=body,
+        content_type="application/json",
+    )
+
+    assert result.route_status == "access_control_or_login"
+    assert result.access_signals["captcha"] is True
+
+
+def test_analyze_route_response_blocks_json_antirobot_message():
+    body = b'{"mensagem":"Falha na verificacao antirrobo.","content":[]}'
+
+    result = analyze_route_response(
+        url="https://example.test/public/pesquisa",
+        final_url="https://example.test/public/pesquisa",
+        method="POST",
+        status_code=200,
+        content=body,
+        content_type="application/json",
+    )
+
+    assert result.route_status == "access_control_or_login"
+    assert result.access_signals["anti_robot"] is True
+
+
 def test_analyze_route_response_scores_structured_json_candidate():
     body = b'{"items":[{"numero":"0000001-10.2024.8.26.0100","ementa":"IDPJ"}]}'
 
@@ -240,6 +294,13 @@ def test_parse_key_value_pairs_accepts_form_payload():
 def test_parse_key_value_pairs_rejects_invalid_payload():
     with pytest.raises(ValueError, match="chave=valor"):
         parse_key_value_pairs(["idpj"])
+
+
+def test_parse_json_payload_accepts_objects_and_arrays():
+    assert parse_json_payload('{"q":"idpj"}') == {"q": "idpj"}
+    assert parse_json_payload('["TSE"]') == ["TSE"]
+    with pytest.raises(ValueError, match="objeto ou array"):
+        parse_json_payload('"idpj"')
 
 
 def test_parse_json_object_accepts_only_objects():

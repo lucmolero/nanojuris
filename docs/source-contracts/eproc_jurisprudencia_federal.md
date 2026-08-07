@@ -1,10 +1,11 @@
 # eproc_jurisprudencia_federal
 
 ## Identidade
-- Fonte oficial: TNU/eproc e TRF6/eproc.
+- Fonte oficial: TNU/eproc, TRF2/eproc e TRF6/eproc.
 - Categoria: `court_jurisprudence`.
 - Familia tecnica: `eproc_jurisprudencia`.
 - URL inicial TNU: `https://eproctnu.cjf.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/pesquisar`.
+- URL inicial TRF2: `https://eproc.trf2.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/pesquisar`.
 - URL inicial TRF6: `https://eproc-jur.trf6.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/pesquisar`.
 - Status de acesso: publico no probe limpo de 2026-08-07.
 
@@ -36,33 +37,44 @@
 - Campos canonicos: `CanonicalDecision`.
 - Campos opcionais: origem, tipo documental, id de jurisprudencia, URL de inteiro teor.
 - Campos instaveis: labels HTML e lista de origens variam por instancia.
-- Inteiro teor: link publico esperado pelo padrao eproc; fixture especifica ainda pendente para TNU/TRF6.
+- Inteiro teor: link publico esperado pelo padrao eproc; fixture especifica ainda pendente para TNU/TRF2/TRF6.
 - Documentos vinculados: `id_jurisprudencia`.
 
 ## Comportamento observado
 - Busca com resultado:
   - TNU: `txtPesquisa=aposentadoria`, `rdoCampo=I`, HTTP 200, `resultadoItem`.
+  - TRF2: `txtPesquisa=aposentadoria`, `rdoCampo=I`, HTTP 200, `resultadoItem`.
   - TRF6: `txtPesquisa=aposentadoria`, `rdoCampo=I`, HTTP 200, `resultadoItem`.
+- Origens observadas:
+  - TNU: `TNU`.
+  - TRF2: `TRF2`, `TRU2`, Turmas Recursais.
+  - TRF6: `TRF6`, `TRU6`, Turmas Recursais e Varas Federais.
+- Tipos documentais observados no TRF2:
+  - `Acordao`;
+  - `Decisao monocratica`;
+  - `Sumula`;
+  - `Despacho/Decisao da Vice-Presidencia`;
+  - `Sentenca`.
 - Busca sem resultado: pendente.
 - Erro HTTP esperado: pendente.
 - Controle de acesso/captcha: nao observado no fluxo testado.
 - Mudanca de layout: risco medio por HTML de sistema.
 
 ## Fixtures
-- Sucesso: pendente.
+- Sucesso: pendente para cada instancia.
 - Vazio: pendente.
 - Erro: pendente.
 - Documento: pendente.
 
 ## MCP e agentes
-- Quando usar: consultas federais/TNU/TRF6 por tema, ementa, inteiro teor ou numero.
+- Quando usar: consultas federais/TNU/TRF2/TRF6 por tema, ementa, inteiro teor ou numero.
 - Quando pular: quando o usuario pedir fonte estadual que nao use eproc ou quando houver sinal de controle de acesso.
 - Mensagem segura para o usuario: "A consulta usa jurisprudencia publica do eproc e retorna apenas conteudo acessivel em sessao limpa."
 - Riscos: HTML volumoso, mudanca de labels e necessidade de rate limit.
 
 ## Proximos passos
 - [ ] Parametrizar provider eproc por base URL, tribunal e origens.
-- [ ] Criar fixtures sanitizadas de TNU e TRF6.
+- [ ] Criar fixtures sanitizadas de TNU, TRF2 e TRF6.
 - [ ] Reusar parser de `trf4_eproc_jurisprudencia`.
 - [ ] Validar rota de inteiro teor com `id_jurisprudencia` real de cada fonte.
 - [ ] Adicionar testes de sucesso, vazio e acesso restrito.

@@ -31,10 +31,23 @@ um dos termos de smoke test; a bateria recomendada por ramo esta em
 | TJRS AJAX/SOLR | `POST https://www.tjrs.jus.br/buscas/jurisprudencia/ajax.php` | HTTP 200, JSON/SOLR com `response.numFound`, `response.docs`, facets e highlighting | promover para provider P0 |
 | TNU/eproc | `POST https://eproctnu.cjf.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados` | HTTP 200, HTML eproc com `resultadoItem`, processo, ementa, relator e inteiro teor | promover como extensao da familia eproc |
 | TRF6/eproc | `POST https://eproc-jur.trf6.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados` | HTTP 200, HTML eproc com resultados reais e bases TRF6/TRU6/Turmas/Varas | promover como extensao da familia eproc |
+| TRF2/eproc | `POST https://eproc.trf2.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados` | HTTP 200, HTML eproc com `resultadoItem`, numero CNJ, ementa/decisao, relator, orgao e inteiro teor | promover como P0 na familia eproc |
+| TRF2 legado | `GET https://juris.trf2.jus.br/consulta.php?...` | falha DNS no ambiente atual, apesar de paginas publicas indexadas | nao promover; preferir eproc/TRF2 |
+| CJF/TRF1 hub | `GET https://www2.cjf.jus.br/jurisprudencia/trf1/index.xhtml` | redireciona para `jurisprudencia.cjf.jus.br`, hub publico de jurisprudencia unificada/TNU/TRF1/CJF | documentar como entrada, nao provider de resultados |
+| TRF1 ementario | `GET https://www.trf1.jus.br/trf1/pesquisa/ementario-de-jurisprudencia` | HTTP 200, catalogo documental paginado com ementarios | manter como rota documental/catalogo |
 | TJGO/Projudi | `POST https://projudi.tjgo.jus.br/ConsultaJurisprudencia` | HTTP 200, HTML com mais de 1M resultados, processo, magistrado, orgao, decisao e inteiro teor no proprio card | promover para contrato HTML P0; download separado ainda pendente |
 | TJMA/Jurisconsult metadados | `GET https://apijuris.tjma.jus.br/v1/jurisprudencia/lista_relatorios` | HTTP 200 JSON com relatorios e URLs tecnicas de acordaos, monocraticas, sumulas e sentencas | promover contrato parcial/metadados |
 | TJMA/Jurisconsult busca | `GET https://apijuris.tjma.jus.br/v1/sg/jurisprudencias/processos?...` sem token | HTTP 400 JSON `captcha_not_provided` | nao automatizar busca principal sem fluxo publico limpo |
 | TJAP/Tucujuris | `GET https://tucujuris.tjap.jus.br/tucujuris/pages/consultar-jurisprudencia/consultar-jurisprudencia.html` | Cloudflare/challenge no HTML limpo | bloquear provider enquanto exigir desafio |
+| STM | `GET https://jurisprudencia.stm.jus.br/` | HTTP 200, portal publico JMU com sinais juridicos e inteiro teor | manter provider existente e aprofundar contrato |
+| TSE/SJUR metadados | `POST https://sjur-pesquisa-api.tse.jus.br/tse/sjur-pesquisa-backend/rest/public/pesquisa/classes` | HTTP 200 JSON com classes eleitorais; endpoint semelhante para relatorias | documentar contrato parcial P1 |
+| TREs/SJUR metadados | `POST https://sjur-pesquisa-api.tse.jus.br/tres/sjur-pesquisa-backend/rest/public/pesquisa/classes` | HTTP 200 JSON com classes por TRE; exemplo `TRE-SP` validado | documentar contrato parcial P1 |
+| TSE/SJUR busca | `POST /public/pesquisa` | HTTP 200 JSON com mensagem de falha antirrobo, sem resultados | bloquear provider de decisoes ate fluxo limpo |
+| TRT2/PJe jurisprudencia | `GET https://pje.trt2.jus.br/jurisprudencia/` e `GET /juris-backend/api/opcoes` | SPA publica e JSON de opcoes; busca/documentos retornam desafio `tokenDesafio`/`imagem` | documentar contrato parcial; nao coletar documentos |
+| TRT15/TRT23 PJe | `GET /jurisprudencia/` | HTTP 403 CloudFront/request blocked em sessao limpa | bloquear provider |
+| Basis/TRT2 | `GET https://basis.trt2.jus.br/discover?query=teletrabalho` | HTTP 200, repositorio DSpace com boletins, atos e doutrina | rota documental, nao provider de decisoes |
+| TJAC/e-SAJ CJSG | `GET https://esaj.tjac.jus.br/cjsg/resultadoSimples.do?...` | HTTP 200 com processo, ementa, relator, orgao, datas e inteiro teor | confirmar fonte forte CJSG |
+| TJCE/e-SAJ CJSG | `GET https://esaj.tjce.jus.br/cjsg/consultaSimples.do` | reset/TLS EOF no ambiente atual | repetir antes de promover |
 
 ## Achados tecnicos
 
@@ -316,10 +329,56 @@ Sinais observados:
 - TNU com origem unica `TNU`;
 - TRF6 com origens `TRF6`, `TRU6`, Turmas Recursais e Varas Federais.
 
-Decisao: TNU e TRF6 devem entrar como P0 por reuso do parser/fetcher eproc ja
+Decisao: TNU, TRF2 e TRF6 devem entrar como P0 por reuso do parser/fetcher eproc ja
 existente. O proximo passo tecnico e parametrizar o provider eproc por
 instancia, preservando `source`, `court`, base URL, origens disponiveis e tipos
 documentais.
+
+### TRF2/eproc e CJF/TRF1
+
+Rota publica TRF2/eproc validada:
+
+```text
+GET  https://eproc.trf2.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/pesquisar
+POST https://eproc.trf2.jus.br/eproc/externo_controlador.php?acao=jurisprudencia@jurisprudencia/listar_resultados
+```
+
+Payload minimo validado:
+
+```text
+txtPesquisa=aposentadoria
+rdoCampo=I
+hdnExibirPesquisaAvancada=
+chkAgruparResultados=on
+```
+
+Sinais observados:
+
+- HTTP 200 em sessao limpa;
+- formulario publico "Jurisprudencia Justica Federal da 2a Regiao";
+- origens `TRF2`, `TRU2` e Turmas Recursais;
+- tipos documentais `Acordao`, `Decisao monocratica`, `Sumula`,
+  `Despacho/Decisao da Vice-Presidencia` e `Sentenca`;
+- resultados com `resultadoItem`, numero CNJ, relator, orgao, ementa/decisao e
+  link de inteiro teor;
+- ausencia de captcha/login no fluxo testado.
+
+A rota legada `juris.trf2.jus.br` falhou DNS no ambiente atual. Como o eproc
+TRF2 respondeu com conteudo juridico completo, a decisao tecnica e promover
+TRF2 pela familia `eproc_jurisprudencia` e manter o legado apenas como nota de
+pesquisa.
+
+Tambem foram testadas entradas CJF/TRF1:
+
+```text
+GET https://www2.cjf.jus.br/jurisprudencia/trf1/index.xhtml
+GET https://www.trf1.jus.br/trf1/pesquisa/ementario-de-jurisprudencia
+```
+
+O primeiro redireciona para um hub de jurisprudencia unificada/TNU/TRF1/CJF. O
+segundo retorna ementario documental paginado. Decisao: documentar como rotas de
+entrada/catalogo, mas nao implementar como provider de decisoes ate localizar
+endpoint de resultado limpo.
 
 ### TJGO/Projudi
 
@@ -413,6 +472,152 @@ Resultado: HTTP 400 JSON `{"error":"captcha_not_provided"}`.
 Decisao: promover apenas o contrato parcial de metadados e links de sumulas/IAC/
 IRDR. Nao implementar busca de acordaos/sentencas enquanto depender de captcha.
 
+### TSE e TREs/SJUR
+
+Frontends publicos:
+
+```text
+GET https://jurisprudencia.tse.jus.br/
+GET https://jurisprudencia-tres.tse.jus.br/
+```
+
+O bundle publico revelou o host tecnico:
+
+```text
+https://sjur-pesquisa-api.tse.jus.br/{tribunal}/sjur-pesquisa-backend/rest/public/pesquisa
+```
+
+O placeholder `{tribunal}` foi observado como:
+
+- `tse` para jurisprudencia do TSE;
+- `tres` para o agregador dos TREs.
+
+Endpoints auxiliares observados:
+
+```text
+POST /classes
+POST /relatorias
+POST /eleicoes
+POST /normas
+POST /download/
+POST /pesquisaTokenValidado
+POST /livre
+POST /simples
+POST /rede
+```
+
+Payloads de metadados validados:
+
+```json
+["TSE"]
+```
+
+```json
+["TRE-SP"]
+```
+
+Sinais observados:
+
+- `POST /classes` e `POST /relatorias` retornam JSON publico com classes e
+  relatores;
+- exemplos de classes: `RESPE`, `AI`, `REspEl`, `AREspEl`;
+- a busca principal `POST /public/pesquisa` respondeu com mensagem de falha
+  antirrobo e `content=[]`;
+- a rota `/livre` testada com payload simples retornou 404 no ambiente atual.
+
+Decisao: contrato parcial P1 para metadados eleitorais publicos. Nao promover
+provider de decisoes enquanto a busca principal depender de token/antirrobo ou
+validacao humana.
+
+### TRT2/PJe jurisprudencia e Basis
+
+Frontend publico TRT2:
+
+```text
+GET https://pje.trt2.jus.br/jurisprudencia/
+```
+
+Endpoints observados no bundle:
+
+```text
+GET  /juris-backend/api/opcoes
+POST /juris-backend/api/filtros
+POST /juris-backend/api/documentos
+GET  /juris-backend/api/token
+```
+
+Sinais observados:
+
+- `GET /opcoes` retorna JSON publico com regional, versao, URL de consulta PJe
+  e configuracao de captcha;
+- `POST /filtros` com payload incompleto retorna erro de parametros;
+- `POST /documentos` retorna `tokenDesafio` e `imagem` em vez de documentos no
+  fluxo limpo;
+- `GET /token` retornou HTTP 200 sem conteudo util no probe.
+
+Decisao: documentar contrato parcial e bloquear provider de documentos enquanto
+o fluxo exigir desafio por imagem/token. O diagnostico `probe-rota` deve marcar
+esse retorno como `access_control_or_login`, nao como rota valida.
+
+Rota documental relacionada:
+
+```text
+GET https://basis.trt2.jus.br/discover?query=teletrabalho
+```
+
+O Basis/TRT2 e um repositorio DSpace publico com boletins, atos normativos,
+doutrina e materiais correlatos. Pode virar provider documental ou de boletins,
+mas nao deve ser confundido com busca de decisoes completas.
+
+### TJAC/e-SAJ CJSG e TJCE
+
+TJAC/CJSG validado:
+
+```text
+GET https://esaj.tjac.jus.br/cjsg/consultaCompleta.do
+GET https://esaj.tjac.jus.br/cjsg/resultadoSimples.do?conversationId=&nuProcOrigem=0700309-51.2015.8.01.0001&nuRegistro=
+```
+
+Sinais observados:
+
+- HTTP 200 em sessao limpa;
+- formulario CJSG completo;
+- resultado com numero CNJ, ementa, relator, orgao julgador, data de julgamento
+  e publicacao;
+- link/conteudo de inteiro teor publico.
+
+Decisao: fonte forte da familia e-SAJ/CJSG. Como ja existem providers CJSG no
+codigo, TJAC deve ser usado para endurecer a abstracao por familia e fixtures
+reais.
+
+TJCE/CJSG:
+
+```text
+GET https://esaj.tjce.jus.br/cjsg/consultaSimples.do
+```
+
+O ambiente atual recebeu `ConnectionResetError`/TLS EOF. Decisao: nao promover
+ate haver probe limpo; repetir com janela diferente e confirmar se e bloqueio
+regional, instabilidade ou requisito TLS especifico.
+
+### STM
+
+Rota validada:
+
+```text
+GET https://jurisprudencia.stm.jus.br/
+```
+
+Sinais observados:
+
+- HTTP 200 em sessao limpa;
+- pagina oficial JMU/STM com sinais de jurisprudencia, inteiro teor e pesquisa;
+- provider `stm_jurisprudencia` ja existe no codigo.
+
+Decisao: manter como fonte especializada relevante. O proximo passo e comparar
+o contrato documentado com o provider existente e adicionar fixture live
+sanitizada se ainda faltar.
+
 ### TJAP/Tucujuris
 
 Rotas testadas:
@@ -433,34 +638,41 @@ publica estavel sem desafio.
 
 ## Proximos probes recomendados
 
-1. Parametrizar familia eproc para TNU e TRF6, reaproveitando parser ja testado
-   em TRF4/TJSP.
+1. Parametrizar familia eproc para TNU, TRF2 e TRF6, reaproveitando parser ja
+   testado em TRF4/TJSP.
 2. TJGO: criar contrato Projudi, fixture HTML sanitizada e parser offline de
    cards com inteiro teor embutido.
 3. TJRS: criar contrato AJAX/SOLR, fixture JSON sanitizada e parser offline.
 4. TJBA: criar contrato em `docs/source-contracts/`, fixture GraphQL sanitizada
    e parser offline.
 5. TJPR: criar contrato da rota HTML, fixture de resultado e parser offline.
-6. TJSC: documentar contrato eproc, descobrir payload de busca e validar
+6. TJSC/TRF2: documentar contrato eproc, descobrir payload de busca e validar
    paginacao.
-7. TJMA: documentar contrato parcial de metadados e manter busca principal
+7. TSE/TREs: manter metadados em contrato parcial e nao promover busca enquanto
+   houver antirrobo/token.
+8. TRT2/PJe: documentar desafio `tokenDesafio`/`imagem` e bloquear automacao de
+   documentos.
+9. TJMA: documentar contrato parcial de metadados e manter busca principal
    bloqueada enquanto exigir captcha.
-8. TST: reproduzir filtro textual com payload salvo em `--json-file` usando
+10. TST: reproduzir filtro textual com payload salvo em `--json-file` usando
    termos trabalhistas (`horas extras`, `justa causa`, `equiparacao salarial`).
-9. TRF3/TRF5: repetir com janela maior e pagina alternativa oficial.
-10. TJMG/TJRJ/TJAP: manter documentados como formulacoes ricas ou bloqueadas, mas bloquear provider
-   enquanto resultado depender de captcha/reCAPTCHA.
+11. TRF1/TRF3/TRF5: repetir com janela maior e pagina alternativa oficial.
+12. TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23: manter documentados como formulacoes ricas ou bloqueadas, mas bloquear provider
+   enquanto resultado depender de captcha/reCAPTCHA/Cloudflare/reset.
 
 ## Ranking de implementacao
 
 | Rank | Fonte | Motivo |
 | --- | --- | --- |
-| 1 | TNU/TRF6 eproc | alto valor federal, rota limpa e reuso imediato do parser eproc |
+| 1 | TNU/TRF2/TRF6 eproc | alto valor federal, rota limpa e reuso imediato do parser eproc |
 | 2 | TJGO/Projudi | alto volume, resultado publico e inteiro teor embutido nos cards |
 | 3 | TJRS AJAX/SOLR | JSON estruturado, facets ricas, alto volume e rota publica rapida |
 | 4 | TJBA GraphQL | contrato estruturado, campos canonicos diretos, resposta limpa |
 | 5 | TJPR HTML | alto volume, resultado publico e sinais juridicos completos |
 | 6 | TJSC/eproc | fonte publica forte e potencial de provider por familia tecnica |
-| 7 | TST backend | JSON rico, mas filtro textual ainda precisa ser estabilizado |
-| 8 | TJMA metadados/sumulas | API limpa parcial; busca principal exige captcha |
-| 9 | TJMG/TJRJ/TJAP | formularios ricos ou portais conhecidos, mas busca direta bloqueada por captcha/reCAPTCHA/Cloudflare |
+| 7 | TJAC/CJSG | rota CJSG validada e util para endurecer familia e-SAJ |
+| 8 | TST backend | JSON rico, mas filtro textual ainda precisa ser estabilizado |
+| 9 | TSE/TREs metadados | contrato oficial util para filtros, mas busca principal bloqueada |
+| 10 | TRT2 metadados/opcoes | contrato parcial util para diagnostico PJe, mas documentos exigem desafio |
+| 11 | TJMA metadados/sumulas | API limpa parcial; busca principal exige captcha |
+| 12 | TJMG/TJRJ/TJAP/TJCE/TRT15/TRT23 | formularios ricos ou portais conhecidos, mas busca direta bloqueada por captcha/reCAPTCHA/Cloudflare/reset |

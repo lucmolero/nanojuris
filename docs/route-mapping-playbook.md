@@ -49,8 +49,15 @@ nanojuris probe-rota "https://api.tribunal.exemplo.jus.br/jurisprudencia" \
   --expect "ementa"
 ```
 
+`--json` aceita objeto ou array JSON. Para endpoints de metadados que recebem
+lista de tribunais, por exemplo, o payload pode ser:
+
+```json
+["TSE"]
+```
+
 Em PowerShell ou payloads maiores, prefira arquivo JSON para evitar problemas de
-escape:
+escape e preservar aspas internas:
 
 ```bash
 nanojuris probe-rota "https://api.tribunal.exemplo.jus.br/jurisprudencia" \

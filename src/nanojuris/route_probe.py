@@ -49,6 +49,7 @@ ACCESS_SIGNAL_PATTERNS = {
     "anti_robot": r"\b(?:antirrob[oô]|anti-rob[oô]|verifica[cç][aã]o automatica)\b",
     "empty_session": r"\b(?:emptysession|sess[aã]o expirada|sess[aã]o inexistente)\b",
     "access_denied": r"\b(?:access denied|acesso negado|forbidden|n[aã]o autorizado)\b",
+    "request_blocked": r"\b(?:request blocked|request could not be satisfied)\b",
 }
 PAGINATION_PATTERNS = (
     r"\bresultados?\s+\d+\s+a\s+\d+\s+de\s+\d+\b",
@@ -97,7 +98,7 @@ def probe_route(
     timeout: float = 30.0,
     user_agent: str = "NanoJuris/route-probe (+https://github.com/lucmolero/nanojuris)",
     data: Mapping[str, str] | None = None,
-    json_payload: Mapping[str, Any] | None = None,
+    json_payload: Any | None = None,
     verify_ssl: bool = True,
 ) -> RouteProbeResult:
     """Probe a public route with a clean HTTP session and no browser state."""
@@ -111,7 +112,7 @@ def probe_route(
             normalized_method,
             url,
             data=dict(data or {}),
-            json=dict(json_payload) if json_payload is not None else None,
+            json=json_payload,
             timeout=timeout,
             allow_redirects=True,
             verify=verify_ssl,
@@ -223,13 +224,22 @@ def parse_key_value_pairs(items: Sequence[str]) -> dict[str, str]:
     return parsed
 
 
-def parse_json_object(value: str) -> dict[str, Any]:
-    """Parse a CLI JSON object used as probe payload."""
+def parse_json_payload(value: str) -> Any:
+    """Parse a CLI JSON object or array used as probe payload."""
 
     try:
         payload = json.loads(value)
     except json.JSONDecodeError as exc:
         raise ValueError(f"JSON invalido: {exc}") from exc
+    if not isinstance(payload, dict | list):
+        raise ValueError("O payload JSON do probe deve ser um objeto ou array.")
+    return payload
+
+
+def parse_json_object(value: str) -> dict[str, Any]:
+    """Parse a CLI JSON object. Kept for compatibility with older callers."""
+
+    payload = parse_json_payload(value)
     if not isinstance(payload, dict):
         raise ValueError("O payload JSON do probe deve ser um objeto.")
     return payload
@@ -282,10 +292,13 @@ def _access_signals(*, raw_text: str, visible_text: str) -> dict[str, bool]:
     signals["cloudflare"] = signals["cloudflare"] or (
         raw_signals["cloudflare"] and challenge_visible
     )
-    for name in ("empty_session", "access_denied"):
+    for name in ("empty_session", "access_denied", "request_blocked"):
         signals[name] = raw_signals[name]
     signals["captcha"] = signals["captcha"] or bool(
         re.search(r"\b(?:digite\s+os\s+n[uú]meros|informe\s+o\s+c[oó]digo)\b", visible_text)
+    )
+    signals["captcha"] = signals["captcha"] or (
+        "tokendesafio" in raw_text and '"imagem"' in raw_text
     )
     signals["recaptcha"] = signals["recaptcha"] or bool(
         raw_signals["recaptcha"]
@@ -298,6 +311,7 @@ def _access_signals(*, raw_text: str, visible_text: str) -> dict[str, bool]:
         raw_signals["anti_robot"]
         and re.search(r"\b(?:rob[oô]|automatizada|verifica[cç][aã]o)\b", visible_text)
     )
+    signals["anti_robot"] = signals["anti_robot"] or "antirrob" in raw_text
     signals["login"] = signals["login"] or bool(
         raw_signals["login"] and re.search(ACCESS_SIGNAL_PATTERNS["login"], visible_text)
     )

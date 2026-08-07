@@ -131,6 +131,11 @@ Use `needs_deepening` do resumo como fila tecnica. Em geral, priorize:
 1. Fontes superiores com conteudo curado e valido, como `stf_informativo` e
    `stj_informativo`.
 2. Fontes com alto valor juridico e risco alto, como `tjsp_cjsg` e `stj_scon`.
-3. Fontes boas para demonstracao e jurimetria, como `tjdf_juris` e `trf4_eproc_jurisprudencia`.
-4. Familias reutilizaveis, como CJSG/e-SAJ e eproc.
-5. Fontes especializadas, como NUGEP-NAC, TCE-SP, TRE-SP e Comunica PJe.
+3. Familias reutilizaveis com rota limpa, como `eproc_jurisprudencia_federal`
+   para TNU/TRF2/TRF6 e CJSG/e-SAJ para TJAC/TJSP/TJMS.
+4. Fontes boas para demonstracao e jurimetria, como `tjdf_juris`,
+   `tjrs_solr`, `tjba_graphql`, `tjgo_projudi_jurisprudencia` e
+   `trf4_eproc_jurisprudencia`.
+5. Contratos parciais relevantes, como `justica_eleitoral_sjur`,
+   `trt2_pje_jurisprudencia` e `tjma_jurisconsult`, mantendo bloqueios de
+   captcha/antirrobo/desafio claramente documentados.
