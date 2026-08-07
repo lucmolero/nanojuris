@@ -49,6 +49,31 @@ nanojuris probe-rota "https://api.tribunal.exemplo.jus.br/jurisprudencia" \
   --expect "ementa"
 ```
 
+Em PowerShell ou payloads maiores, prefira arquivo JSON para evitar problemas de
+escape:
+
+```bash
+nanojuris probe-rota "https://api.tribunal.exemplo.jus.br/jurisprudencia" \
+  --metodo POST \
+  --json-file payload.json \
+  --expect "totalRegistros"
+```
+
+## Bateria de termos
+
+`idpj` e apenas um smoke test civil/empresarial. O mapeamento serio deve usar
+uma bateria por ramo, porque algumas fontes ranqueiam melhor ou validam payloads
+com termos mais naturais ao acervo.
+
+| Ramo/fonte | Termos iniciais |
+| --- | --- |
+| TJs estaduais | `dano moral`, `plano de saude`, `inventario`, `idpj`, `execucao fiscal` |
+| TST/TRTs | `horas extras`, `justa causa`, `equiparacao salarial`, `adicional de insalubridade` |
+| TRFs/TNU | `aposentadoria`, `beneficio previdenciario`, `execucao fiscal`, `mandado de seguranca` |
+| STJ/STF | `repetitivo`, `repercussao geral`, `icms`, `habeas corpus`, `recurso especial` |
+| TSE/TREs | `abuso de poder`, `propaganda eleitoral`, `registro de candidatura` |
+| STM/JMU | `desercao`, `insubmissao`, `habeas corpus` |
+
 ## Interpretacao do score
 
 O probe retorna `route_status`, `score`, `quality_grade`, sinais juridicos,

@@ -182,6 +182,41 @@ def test_cli_probe_rota_outputs_route_diagnostic(monkeypatch, capsys):
     assert payload["quality_grade"] == "A"
 
 
+def test_cli_probe_rota_accepts_json_file(monkeypatch, capsys):
+    calls = []
+
+    def fake_probe_route(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return RouteProbeResult(
+            ok=True,
+            route_status="live_valid",
+            quality_grade="A",
+            score=11,
+            url=url,
+            final_url=url,
+            status_code=200,
+        )
+
+    monkeypatch.setattr("nanojuris.cli.probe_route", fake_probe_route)
+    monkeypatch.setattr("nanojuris.cli._read_text_file", lambda path: '{"e":"horas extras"}')
+
+    exit_code = main(
+        [
+            "probe-rota",
+            "https://example.test/api",
+            "--metodo",
+            "POST",
+            "--json-file",
+            "payload.json",
+        ]
+    )
+
+    assert exit_code == 0
+    assert calls[0]["json_payload"] == {"e": "horas extras"}
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["score"] == 11
+
+
 def test_cli_contratos_outputs_source_contracts(capsys):
     exit_code = main(["contratos", "--fonte", "tjdf_juris"])
 

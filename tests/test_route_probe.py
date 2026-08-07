@@ -69,6 +69,77 @@ def test_analyze_route_response_blocks_access_control_html():
     assert "nao implementar bypass" in result.recommendation.lower()
 
 
+def test_analyze_route_response_classifies_captcha_401_as_access_control():
+    html = (
+        "<html><title>Informe o código</title><body>Captcha Digite os números abaixo</body></html>"
+    )
+
+    result = analyze_route_response(
+        url="https://example.test/jurisprudencia/pesquisa",
+        final_url="https://example.test/jurisprudencia/pesquisa",
+        method="GET",
+        status_code=401,
+        content=html.encode(),
+        content_type="text/html",
+    )
+
+    assert result.ok is False
+    assert result.route_status == "access_control_or_login"
+    assert result.access_signals["captcha"] is True
+
+
+def test_analyze_route_response_does_not_block_public_page_with_login_icon():
+    html = """
+    <html>
+      <body>
+        <nav>Icone de Login Intranet Webmail</nav>
+        <main>Consulta à Jurisprudência eproc decisão</main>
+      </body>
+    </html>
+    """
+
+    result = analyze_route_response(
+        url="https://example.test/consulta",
+        final_url="https://example.test/consulta",
+        method="GET",
+        status_code=200,
+        content=html.encode(),
+        content_type="text/html",
+        expected_texts=["eproc"],
+    )
+
+    assert result.route_status == "live_valid"
+    assert result.access_signals["login"] is False
+
+
+def test_analyze_route_response_does_not_block_global_recaptcha_script():
+    html = """
+    <html>
+      <head><script src="https://www.google.com/recaptcha/api.js"></script></head>
+      <body>
+        <main>
+          Busca de Jurisprudência
+          Resultado da pesquisa
+          Ementa decisão relator órgão julgador inteiro teor
+        </main>
+      </body>
+    </html>
+    """
+
+    result = analyze_route_response(
+        url="https://example.test/jurisprudencia",
+        final_url="https://example.test/jurisprudencia",
+        method="GET",
+        status_code=200,
+        content=html.encode(),
+        content_type="text/html",
+        expected_texts=["Resultado da pesquisa"],
+    )
+
+    assert result.route_status == "live_valid"
+    assert result.access_signals["recaptcha"] is False
+
+
 def test_analyze_route_response_scores_structured_json_candidate():
     body = b'{"items":[{"numero":"0000001-10.2024.8.26.0100","ementa":"IDPJ"}]}'
 

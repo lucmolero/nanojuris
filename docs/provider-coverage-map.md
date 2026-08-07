@@ -33,6 +33,10 @@ segredo de justica ou controles de acesso.
 | P0 | TJSP/NugepNac | ja implementado; catalogo oficial limpo de IRDR/IAC | `CanonicalPrecedent` com tema, questao e tese |
 | P0 | TCE-SP jurisprudencia estatica | ja implementado; sumulas e boletins publicos sem captcha | `CanonicalPrecedent` administrativo |
 | P0 | TRE-SP temas selecionados | ja implementado; curadoria tematica eleitoral publica | `CanonicalPrecedent` tematico |
+| P0 | TJRS jurisprudencia AJAX/SOLR | rota publica estruturada validada; retorna docs, facets, highlighting e volume total | `CanonicalDecision` via JSON/SOLR |
+| P0 | TJBA jurisprudencia GraphQL | rota publica estruturada validada; retorna decisoes, ementa, relator, orgao julgador e numero processual | `CanonicalDecision` via JSON estruturado |
+| P0 | TJPR jurisprudencia HTML | rota publica validada com resultado, relator, orgao julgador, ementa e paginacao | `CanonicalDecision` via parser HTML |
+| P0 | TJSC/eproc jurisprudencia | formulario publico eproc validado; potencial de reuso por familia tecnica | `CanonicalDecision` e contrato `eproc_jurisprudencia` |
 | P0 | STJ jurisprudencia/SCON | provider inicial `stj_scon` com parser offline; ficha em [stj-source-profile.md](stj-source-profile.md) | acordaos como `CanonicalDecision`; inteiro teor em fase futura |
 | P0 | STF jurisprudencia | provider inicial `stf_juris` via API JSON observada por HAR; WAF/SSL diagnosticados | acordaos como `CanonicalDecision`; inteiro teor como URL ate validar documento sem 403 |
 | P1 | TST jurisprudencia publica | SPA com backend identificado, mas payload exato ainda nao promovido | decisoes trabalhistas apos probe limpo |
@@ -54,6 +58,11 @@ A cobertura ampla do Brasil deve priorizar familias tecnicas reutilizaveis:
 - `tjsp_nugepnac`: catalogos oficiais TJSP/NugepNac de precedentes;
 - `tce_sp_jurisprudencia`: catalogos estaticos TCE-SP de sumulas e boletins;
 - `tre_sp_temas`: curadoria tematica publica do TRE-SP;
+- `tjrs_solr`: AJAX publico baseado em SOLR para jurisprudencia do TJRS;
+- `tjba_graphql`: GraphQL publico de jurisprudencia do TJBA;
+- `tjpr_juris`: HTML publico de jurisprudencia do TJPR;
+- `eproc_jurisprudencia`: familia eproc para TJSC e tribunais que exponham
+  pesquisa publica equivalente;
 - `esaj`: familia Softplan/e-SAJ para tribunais que compartilham padroes;
 - `eproc`: familia eproc, com pesquisa publica quando disponivel;
 - `pje`: familia PJe, normalmente com maior incidencia de controle de acesso;

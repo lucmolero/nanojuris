@@ -154,6 +154,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help='Payload JSON como objeto. Ex.: \'{"q":"idpj"}\'',
     )
+    probe_rota.add_argument(
+        "--json-file",
+        default="",
+        help="Caminho de arquivo JSON com payload do probe.",
+    )
     probe_rota.add_argument("--timeout", type=float, default=30.0)
     probe_rota.add_argument(
         "--sem-verificar-ssl",
@@ -369,6 +374,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "probe-rota":
+            json_payload = None
+            if args.json and args.json_file:
+                raise ValueError("Use apenas um entre --json e --json-file")
+            if args.json:
+                json_payload = parse_json_object(args.json)
+            if args.json_file:
+                json_payload = parse_json_object(_read_text_file(args.json_file))
             result = probe_route(
                 args.url,
                 method=args.metodo,
@@ -376,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
                 timeout=args.timeout,
                 user_agent=client.config.user_agent,
                 data=parse_key_value_pairs(args.data),
-                json_payload=parse_json_object(args.json) if args.json else None,
+                json_payload=json_payload,
                 verify_ssl=not args.sem_verificar_ssl,
             )
             print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
@@ -467,6 +479,11 @@ def _format_search(page: Any, output_format: str) -> str:
     if output_format == "markdown":
         return search_page_to_markdown(page)
     return json.dumps(page.to_dict(), ensure_ascii=False, indent=2)
+
+
+def _read_text_file(path: str) -> str:
+    with open(path, encoding="utf-8") as file:
+        return file.read()
 
 
 def _compact_record(record: dict[str, Any]) -> dict[str, Any]:

@@ -42,7 +42,10 @@ ACCESS_SIGNAL_PATTERNS = {
     "recaptcha": r"\b(?:recaptcha|g-recaptcha)\b",
     "turnstile": r"\bturnstile\b",
     "cloudflare": r"\bcloudflare\b",
-    "login": r"\b(?:login|entrar no sistema|autentica[cç][aã]o|sajcas|cas server)\b",
+    "login": (
+        r"\b(?:fa[cç]a login|login obrigat[oó]rio|entrar no sistema|"
+        r"autentica[cç][aã]o requerida|sajcas|cas server)\b"
+    ),
     "anti_robot": r"\b(?:antirrob[oô]|anti-rob[oô]|verifica[cç][aã]o automatica)\b",
     "empty_session": r"\b(?:emptysession|sess[aã]o expirada|sess[aã]o inexistente)\b",
     "access_denied": r"\b(?:access denied|acesso negado|forbidden|n[aã]o autorizado)\b",
@@ -158,7 +161,7 @@ def analyze_route_response(
     lowered = text.lower()
     visible, title = _visible_text_and_title(text, content_type)
     expected = {item: item in text or item in visible for item in expected_texts}
-    access_signals = _signals(lowered, ACCESS_SIGNAL_PATTERNS)
+    access_signals = _access_signals(raw_text=lowered, visible_text=visible.lower())
     legal_signals = _signals(visible.lower() or lowered, LEGAL_SIGNAL_PATTERNS)
     route_features = _route_features(
         content_type=content_type,
@@ -264,6 +267,31 @@ def _signals(text: str, patterns: Mapping[str, str]) -> dict[str, bool]:
     }
 
 
+def _access_signals(*, raw_text: str, visible_text: str) -> dict[str, bool]:
+    signals = _signals(visible_text, ACCESS_SIGNAL_PATTERNS)
+    raw_signals = _signals(raw_text, ACCESS_SIGNAL_PATTERNS)
+    for name in ("turnstile", "cloudflare", "empty_session", "access_denied"):
+        signals[name] = raw_signals[name]
+    signals["captcha"] = signals["captcha"] or bool(
+        re.search(r"\b(?:digite\s+os\s+n[uú]meros|informe\s+o\s+c[oó]digo)\b", visible_text)
+    )
+    signals["recaptcha"] = signals["recaptcha"] or bool(
+        raw_signals["recaptcha"]
+        and re.search(
+            r"\b(?:captcha|n[aã]o\s+sou\s+um\s+rob[oô]|verifica[cç][aã]o\s+humana)\b",
+            visible_text,
+        )
+    )
+    signals["anti_robot"] = signals["anti_robot"] or bool(
+        raw_signals["anti_robot"]
+        and re.search(r"\b(?:rob[oô]|automatizada|verifica[cç][aã]o)\b", visible_text)
+    )
+    signals["login"] = signals["login"] or bool(
+        raw_signals["login"] and re.search(ACCESS_SIGNAL_PATTERNS["login"], visible_text)
+    )
+    return signals
+
+
 def _route_features(
     *,
     content_type: str,
@@ -341,10 +369,10 @@ def _route_status(
 ) -> RouteStatus:
     if status_code == 404:
         return "not_found"
-    if status_code >= 400:
-        return "source_unavailable"
     if any(access_signals.values()):
         return "access_control_or_login"
+    if status_code >= 400:
+        return "source_unavailable"
     if expected_texts and not all(expected_texts.values()):
         return "candidate"
     if any(legal_signals.values()) or route_features.get("structured_response"):
